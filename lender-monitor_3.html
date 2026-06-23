@@ -163,27 +163,17 @@
 
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
-const CH_API_KEY = '035150a0-a960-4557-b368-3da8dc590c64';
-// Embed key directly in URL as Basic auth — avoids header stripping by proxy
-function chUrl(path){
-  const encoded = btoa(CH_API_KEY + ':');
-  // Use allorigins proxy which preserves the full URL including auth
-  const target = `https://${CH_API_KEY}@api.company-information.service.gov.uk${path}`;
-  return `https://api.allorigins.win/get?url=${encodeURIComponent('https://api.company-information.service.gov.uk' + path + (path.includes('?')?'&':'?') + 'apikey=' + CH_API_KEY)}`;
-}
+const WORKER = 'https://raspy-forest-6868.jk99r87yk5.workers.dev';
 
-// ── SIC data ──────────────────────────────────────────────────────────────────
 const SIC_LENDERS={'all':'All Lending SICs','64921':'64921 — Credit granting','64922':'64922 — Other credit','64191':'64191 — Banks','64999':'64999 — Financial NEC'};
 const SIC_BROKERS={'all':'All Broker SICs','66190':'66190 — Financial auxiliaries','66120':'66120 — Securities dealing','64300':'64300 — Trusts & funds'};
 const TARGET_LENDERS=['64921','64922','64191','64999'];
 const TARGET_BROKERS=['66190','66120','64300'];
 const SIC_LABELS={'64921':'Credit granting','64922':'Other credit','64191':'Banks','64999':'Financial NEC','66190':'Financial auxiliaries','66120':'Securities dealing','64300':'Trusts & funds'};
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let pipeline=JSON.parse(localStorage.getItem('nlr-v3')||'[]');
 let selectedBroker=null,selectedLender=null;
 
-// ── SIC dropdown ──────────────────────────────────────────────────────────────
 function updateSicOptions(){
   const mode=document.getElementById('mode-filter').value;
   const opts=mode==='brokers'?SIC_BROKERS:SIC_LENDERS;
@@ -191,7 +181,6 @@ function updateSicOptions(){
 }
 updateSicOptions();
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -201,24 +190,14 @@ function switchTab(tab,el){
   updatePipelineStat();
 }
 
-// ── API — uses allorigins which returns JSON wrapped in {contents:"..."}  ─────
 async function chFetch(path){
-  const apiUrl='https://api.company-information.service.gov.uk'+path;
-  const proxyUrl=`https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
-  const res=await fetch(proxyUrl,{
-    headers:{'Authorization':'Basic '+btoa(CH_API_KEY+':')}
-  });
-  if(!res.ok) throw new Error(`Proxy error ${res.status}`);
-  const wrapper=await res.json();
-  if(!wrapper.contents) throw new Error('No data returned');
-  const data=JSON.parse(wrapper.contents);
-  if(data.error) throw new Error(`CH API: ${data.error}`);
-  return data;
+  const res=await fetch(WORKER+path);
+  if(!res.ok) throw new Error(`CH API ${res.status}`);
+  return res.json();
 }
 
 function daysSince(d){return Math.floor((Date.now()-new Date(d))/86400000);}
 
-// ── Search ────────────────────────────────────────────────────────────────────
 async function runSearch(){
   const btn=document.getElementById('search-btn');
   btn.disabled=true;btn.textContent='Searching...';
@@ -258,7 +237,7 @@ async function runSearch(){
     document.getElementById('results-label').textContent=`Results — ${filtered.length} found`;
     renderResults(filtered);
   }catch(err){
-    container.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red)">${err.message}<br><br><span style="color:var(--text-muted);font-size:12px">Check your internet connection and try again.</span></div></div>`;
+    container.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red)">${err.message}</div></div>`;
   }
   btn.disabled=false;btn.textContent='Search';
 }
@@ -297,7 +276,6 @@ function renderResults(companies){
   }).join('');
 }
 
-// ── Pipeline ──────────────────────────────────────────────────────────────────
 function togglePipeline(number,name,date,address,broker){
   const idx=pipeline.findIndex(p=>p.company_number===number);
   if(idx>-1){pipeline.splice(idx,1);}else{pipeline.push({company_number:number,name,date_of_creation:date,address,type:broker?'broker':'lender',status:'identified',added:new Date().toISOString()});}
@@ -328,7 +306,6 @@ function renderPipeline(){
 function updateStatus(number,status){const item=pipeline.find(p=>p.company_number===number);if(item){item.status=status;savePipeline();}}
 function removePipeline(number){pipeline=pipeline.filter(p=>p.company_number!==number);savePipeline();updatePipelineStat();renderPipeline();}
 
-// ── Outreach ──────────────────────────────────────────────────────────────────
 function openOutreach(name,address,incDate,broker){
   const age=daysSince(incDate);
   const monthYear=new Date(incDate).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
@@ -341,7 +318,6 @@ function openOutreach(name,address,incDate,broker){
   document.getElementById('outreach-modal').classList.add('open');
 }
 
-// ── Connect ───────────────────────────────────────────────────────────────────
 function openConnectModal(){
   const brokers=pipeline.filter(p=>p.type==='broker');
   const lenders=pipeline.filter(p=>p.type==='lender');
@@ -364,7 +340,6 @@ function generateIntro(){
   document.getElementById('intro-modal').classList.add('open');
 }
 
-// ── Modals ────────────────────────────────────────────────────────────────────
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 ['outreach-modal','connect-modal','intro-modal'].forEach(id=>{document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});});
 function copyText(id,btn){navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{const o=btn.textContent;btn.textContent='Copied ✓';setTimeout(()=>btn.textContent=o,2000);});}
