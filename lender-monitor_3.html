@@ -354,18 +354,19 @@ function renderResults(companies){
   const container = document.getElementById('results-container');
   if(!companies.length){ container.innerHTML='<div class="empty-state"><div class="empty-icon">🔎</div><div class="empty-text">No matches. Try broader filters or a longer date range.</div></div>'; return; }
   container.innerHTML = companies.map(c=>{
-    const age = daysSince(c.date_of_creation);
+    const age = daysSince(c.date_of_creation||c.incorporated_on||'2000-01-01');
     const isHot = age<=30, isWarm = age<=60&&!isHot;
     const sics = c.sic_codes||[];
     const type = getType(sics);
     const inP = pipeline.some(p=>p.company_number===c.company_number);
-    const addr = c.registered_office_address?[c.registered_office_address.locality,c.registered_office_address.postal_code].filter(Boolean).join(', '):'Not listed';
+    const oa = c.registered_office_address||{};
+    const addr = [oa.locality||oa.address_line_1, oa.postal_code].filter(Boolean).join(', ')||'Not listed';
     const name = c.title, sN = name.replace(/'/g,"\\'");
     const cardClass = type==='accountant'?'accountant-card':type==='broker'?'broker-card':(isHot?'hot':isWarm?'warm':'');
     const typeBadge = type==='accountant'?'<span class="badge badge-teal">ACCOUNTANT/IP</span>':type==='broker'?'<span class="badge badge-purple">BROKER</span>':'';
     return `<div class="result-card ${cardClass}">
       <div class="result-top">
-        <div><div class="company-name">${name}</div><div class="company-meta"><span>${c.company_number}</span><span>·</span><span>Inc. ${new Date(c.date_of_creation).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span>·</span><span>${age} days old</span></div></div>
+        <div><div class="company-name">${name}</div><div class="company-meta"><span>${c.company_number}</span><span>·</span><span>Inc. ${new Date(c.date_of_creation||c.incorporated_on).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span>·</span><span>${age} days old</span></div></div>
         <div class="badges">${typeBadge}${type==='lender'&&isHot?'<span class="badge badge-green">HOT</span>':''}${type==='lender'&&isWarm?'<span class="badge badge-amber">WARM</span>':''}${sics.map(s=>`<span class="badge badge-blue">${s}</span>`).join('')}</div>
       </div>
       <div class="result-detail">
@@ -376,8 +377,8 @@ function renderResults(companies){
       <div class="outreach-btn">
         <a href="https://find-and-update.company-information.service.gov.uk/company/${c.company_number}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">CH ↗</a>
         <a href="https://register.fca.org.uk/s/search?predefined=ALL&q=${encodeURIComponent(name)}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">FCA ↗</a>
-        <button class="btn ${inP?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="pipe-btn-${c.company_number}" onclick="togglePipeline('${c.company_number}','${sN}','${c.date_of_creation}','${addr}','${type}')">${inP?'✓ In Pipeline':'+ Pipeline'}</button>
-        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="openOutreach('${sN}','${addr}','${c.date_of_creation}','${type}')">Draft Outreach</button>
+        <button class="btn ${inP?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="pipe-btn-${c.company_number}" onclick="togglePipeline('${c.company_number}','${sN}','${c.date_of_creation||c.incorporated_on}','${addr}','${type}')">${inP?'✓ In Pipeline':'+ Pipeline'}</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="openOutreach('${sN}','${addr}','${c.date_of_creation||c.incorporated_on}','${type}')">Draft Outreach</button>
       </div>
     </div>`;
   }).join('');
