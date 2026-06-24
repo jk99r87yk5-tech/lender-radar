@@ -96,7 +96,7 @@
   <div class="status-pill"><div class="pulse"></div>LIVE</div>
 </header>
 <main>
-  <div class="notice"><strong>How this works:</strong> Searches Companies House live for recently incorporated lenders, brokers, accountants and referral partners. <strong>HOT</strong> = under 30 days old. Click FCA ↗ to verify authorisation. Use "Connect" to draft broker→lender introductions. Three outreach templates per prospect: lender, broker, or accountant/IP.</div>
+  <div class="notice"><strong>How this works:</strong> Uses Companies House <strong>advanced search</strong> to find recently incorporated companies by SIC code — not just by name. This means it finds companies like Excel Capital regardless of what their name contains. <strong>HOT</strong> = under 30 days. Click FCA ↗ to verify authorisation. Three outreach templates per prospect.</div>
   <div class="tab-row">
     <button class="tab active" onclick="switchTab('search',this)">Prospect Search</button>
     <button class="tab" onclick="switchTab('pipeline',this)">My Pipeline</button>
@@ -118,7 +118,7 @@
         <option value="365">Last 12 months</option>
       </select></div>
       <div class="control-group"><label>SIC Code</label><select id="sic-filter"></select></div>
-      <div class="control-group"><label>Search Term (optional)</label><input type="text" id="search-term" placeholder="e.g. capital, lending..."/></div>
+      <div class="control-group"><label>Name Filter (optional)</label><input type="text" id="search-term" placeholder="Filter results by name..."/></div>
       <button class="btn" id="search-btn" onclick="runSearch()">Search</button>
     </div>
     <div class="stats-row">
@@ -299,17 +299,34 @@ async function runSearch(){
 
   try{
     let all = [];
-    for(const q of searchTerms.slice(0,4)){
-      const data = await chFetch(`/search/companies?q=${encodeURIComponent(q)}&items_per_page=50`);
-      if(data.items) all = all.concat(data.items);
+    // Use advanced search which supports direct SIC code filtering
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+    const incFrom = cutoff.toISOString().split('T')[0];
+    const incTo = new Date().toISOString().split('T')[0];
+
+    for(const sic of targetSics.slice(0,8)){
+      // Advanced search by SIC code + date range — no name matching needed
+      const params = new URLSearchParams({
+        sic_codes: sic,
+        incorporated_from: incFrom,
+        incorporated_to: incTo,
+        company_status: 'active',
+        size: 100,
+        start_index: 0
+      });
+      try{
+        const data = await chFetch(`/advanced-search/companies?${params}`);
+        if(data.items) all = all.concat(data.items);
+      } catch(e){ console.warn('SIC search failed for '+sic, e); }
     }
     const seen = new Set();
     all = all.filter(c=>{ if(seen.has(c.company_number))return false; seen.add(c.company_number); return true; });
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
-    const filtered = all.filter(c=>{
+    // Optional name filter
+    const nameFilter = term.toLowerCase();
+    const filtered = all.filter(c=> {
       if(c.company_status!=='active') return false;
-      if(new Date(c.date_of_creation)<cutoff) return false;
-      return (c.sic_codes||[]).some(s=>targetSics.includes(s));
+      if(nameFilter && !c.title.toLowerCase().includes(nameFilter)) return false;
+      return true;
     });
     filtered.sort((a,b)=>new Date(b.date_of_creation)-new Date(a.date_of_creation));
     const hot = filtered.filter(c=>daysSince(c.date_of_creation)<=30).length;
