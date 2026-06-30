@@ -6,7 +6,15 @@
 <title>New Lender Radar</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-  :root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a38;--accent:#4f7cff;--accent-dim:rgba(79,124,255,0.12);--green:#22c55e;--green-dim:rgba(34,197,94,0.1);--amber:#f59e0b;--amber-dim:rgba(245,158,11,0.1);--purple:#a855f7;--purple-dim:rgba(168,85,247,0.1);--teal:#14b8a6;--teal-dim:rgba(20,184,166,0.1);--red:#ef4444;--text:#e8e8f0;--text-muted:#6b6b88;--text-dim:#9999b8;--mono:'JetBrains Mono',monospace;}
+  :root {
+    --bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a38;
+    --accent:#4f7cff;--accent-dim:rgba(79,124,255,0.12);
+    --green:#22c55e;--green-dim:rgba(34,197,94,0.1);
+    --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.1);
+    --purple:#a855f7;--purple-dim:rgba(168,85,247,0.1);
+    --red:#ef4444;--text:#e8e8f0;--text-muted:#6b6b88;--text-dim:#9999b8;
+    --mono:'JetBrains Mono',monospace;
+  }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;}
   header{border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:50;}
@@ -29,7 +37,7 @@
   select:focus,input:focus{border-color:var(--accent);}
   select option{background:#1a1a24;}
   .btn{background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .2s;font-family:'Inter',sans-serif;}
-  .btn:hover{opacity:.85;}.btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn:hover{opacity:.85;} .btn:disabled{opacity:.4;cursor:not-allowed;}
   .btn-ghost{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);}
   .btn-ghost:hover{border-color:var(--accent);color:var(--accent);opacity:1;}
   .btn-purple{background:var(--purple);}
@@ -37,21 +45,19 @@
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
   .stat-label{font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
   .stat-value{font-size:22px;font-weight:600;letter-spacing:-.5px;}
-  .stat-value.green{color:var(--green);}.stat-value.amber{color:var(--amber);}.stat-value.accent{color:var(--accent);}.stat-value.purple{color:var(--purple);}
+  .stat-value.green{color:var(--green);} .stat-value.amber{color:var(--amber);} .stat-value.accent{color:var(--accent);} .stat-value.purple{color:var(--purple);}
   .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .section-title{font-size:11px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;}
   .results-container{display:flex;flex-direction:column;gap:10px;}
   .result-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:border-color .2s;}
   .result-card:hover{border-color:#3a3a52;}
-  .result-card.hot{border-left:3px solid var(--green);}.result-card.warm{border-left:3px solid var(--amber);}
-  .result-card.broker-card{border-left:3px solid var(--purple);}
-  .result-card.accountant-card{border-left:3px solid var(--teal);}
+  .result-card.hot{border-left:3px solid var(--green);} .result-card.warm{border-left:3px solid var(--amber);} .result-card.broker-card{border-left:3px solid var(--purple);}
   .result-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
   .company-name{font-size:15px;font-weight:600;letter-spacing:-.2px;margin-bottom:3px;}
   .company-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);font-family:var(--mono);flex-wrap:wrap;}
   .badges{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;}
   .badge{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:4px;font-weight:500;letter-spacing:.3px;}
-  .badge-green{background:var(--green-dim);color:var(--green);}.badge-amber{background:var(--amber-dim);color:var(--amber);}.badge-blue{background:var(--accent-dim);color:var(--accent);}.badge-purple{background:var(--purple-dim);color:var(--purple);}.badge-teal{background:var(--teal-dim);color:var(--teal);}
+  .badge-green{background:var(--green-dim);color:var(--green);} .badge-amber{background:var(--amber-dim);color:var(--amber);} .badge-blue{background:var(--accent-dim);color:var(--accent);} .badge-purple{background:var(--purple-dim);color:var(--purple);}
   .result-detail{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
   .detail-item label{display:block;font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
   .detail-item span{font-size:12px;color:var(--text-dim);}
@@ -64,25 +70,23 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
   .modal-overlay.open{display:flex;}
-  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:90%;max-width:580px;max-height:85vh;overflow-y:auto;}
   .modal-title{font-size:16px;font-weight:600;margin-bottom:4px;}
-  .modal-sub{font-size:12px;color:var(--text-muted);margin-bottom:12px;font-family:var(--mono);}
-  .template-tabs{display:flex;gap:4px;margin-bottom:12px;}
-  .t-tab{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text-muted);border:1px solid var(--border);background:var(--surface2);font-family:'Inter',sans-serif;transition:all .2s;}
-  .t-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-  textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;resize:vertical;min-height:260px;outline:none;}
+  .modal-sub{font-size:12px;color:var(--text-muted);margin-bottom:16px;font-family:var(--mono);}
+  textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;line-height:1.6;resize:vertical;min-height:240px;outline:none;}
   textarea:focus{border-color:var(--accent);}
   .modal-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;}
   .connect-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
   .connect-col{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;}
   .connect-col-title{font-size:11px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
   .connect-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:background .15s;margin-bottom:4px;font-size:13px;}
-  .connect-item:hover{background:var(--border);}.connect-item.selected{background:var(--accent-dim);}
+  .connect-item:hover{background:var(--border);}
+  .connect-item.selected{background:var(--accent-dim);}
   .pipeline-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
   table{width:100%;border-collapse:collapse;}
   th{text-align:left;font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:1px solid var(--border);}
   td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-dim);vertical-align:middle;}
-  tr:last-child td{border-bottom:none;}tr:hover td{background:var(--surface2);}
+  tr:last-child td{border-bottom:none;} tr:hover td{background:var(--surface2);}
   .status-select{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);padding:4px 8px;border-radius:5px;font-size:11px;font-family:var(--mono);cursor:pointer;outline:none;}
   @media(max-width:800px){.controls{grid-template-columns:1fr 1fr;}.stats-row{grid-template-columns:1fr 1fr;}.result-detail{grid-template-columns:1fr 1fr;}.connect-grid{grid-template-columns:1fr;}}
 </style>
@@ -91,12 +95,17 @@
 <header>
   <div class="logo">
     <div class="logo-icon">📡</div>
-    <div><div class="logo-text">New Lender Radar</div><div class="logo-sub">FCA · Companies House · Pipeline</div></div>
+    <div>
+      <div class="logo-text">New Lender Radar</div>
+      <div class="logo-sub">FCA · Companies House · Pipeline</div>
+    </div>
   </div>
   <div class="status-pill"><div class="pulse"></div>LIVE</div>
 </header>
 <main>
-  <div class="notice"><strong>How this works:</strong> Uses Companies House <strong>advanced search</strong> to find recently incorporated companies by SIC code — not just by name. This means it finds companies like Excel Capital regardless of what their name contains. <strong>HOT</strong> = under 30 days. Click FCA ↗ to verify authorisation. Three outreach templates per prospect.</div>
+  <div class="notice">
+    <strong>How this works:</strong> Searches Companies House for recently incorporated lenders and brokers. <strong>HOT</strong> = under 30 days old. Click FCA ↗ to verify authorisation status. Use "Connect" in your pipeline to draft a broker→lender introduction — positioning you as the connector.
+  </div>
   <div class="tab-row">
     <button class="tab active" onclick="switchTab('search',this)">Prospect Search</button>
     <button class="tab" onclick="switchTab('pipeline',this)">My Pipeline</button>
@@ -104,21 +113,31 @@
 
   <div id="search-tab">
     <div class="controls">
-      <div class="control-group"><label>Mode</label><select id="mode-filter" onchange="updateSicOptions()">
-        <option value="lenders">New Lenders</option>
-        <option value="brokers">Brokers & Referrers</option>
-        <option value="accountants">Accountants & IPs</option>
-        <option value="all">All</option>
-      </select></div>
-      <div class="control-group"><label>Days Since Inc.</label><select id="days-filter">
-        <option value="30">Last 30 days</option>
-        <option value="60">Last 60 days</option>
-        <option value="90" selected>Last 90 days</option>
-        <option value="180">Last 6 months</option>
-        <option value="365">Last 12 months</option>
-      </select></div>
-      <div class="control-group"><label>SIC Code</label><select id="sic-filter"></select></div>
-      <div class="control-group"><label>Name Filter (optional)</label><input type="text" id="search-term" placeholder="Filter results by name..."/></div>
+      <div class="control-group">
+        <label>Mode</label>
+        <select id="mode-filter" onchange="updateSicOptions()">
+          <option value="lenders">New Lenders</option>
+          <option value="brokers">New Brokers</option>
+          <option value="all">Both</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Days Since Inc.</label>
+        <select id="days-filter">
+          <option value="30">Last 30 days</option>
+          <option value="60">Last 60 days</option>
+          <option value="90" selected>Last 90 days</option>
+          <option value="180">Last 6 months</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>SIC Code</label>
+        <select id="sic-filter"></select>
+      </div>
+      <div class="control-group">
+        <label>Search Term (optional)</label>
+        <input type="text" id="search-term" placeholder="e.g. capital, lending..."/>
+      </div>
       <button class="btn" id="search-btn" onclick="runSearch()">Search</button>
     </div>
     <div class="stats-row">
@@ -133,7 +152,10 @@
       <div style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">Newest first</div>
     </div>
     <div class="results-container" id="results-container">
-      <div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Set your filters and hit Search.<br>Results pull live from Companies House.</div></div>
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-text">Set your filters and hit Search.<br>Results pull live from Companies House.</div>
+      </div>
     </div>
   </div>
 
@@ -145,7 +167,9 @@
         <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="clearPipeline()">Clear All</button>
       </div>
     </div>
-    <div id="pipeline-container"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No companies added yet.<br>Search for prospects and click "+ Pipeline".</div></div></div>
+    <div id="pipeline-container">
+      <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No companies added yet.<br>Search for prospects and click "+ Pipeline".</div></div>
+    </div>
   </div>
 </main>
 
@@ -154,9 +178,11 @@
   <div class="modal">
     <div class="modal-title" id="modal-title">Outreach Template</div>
     <div class="modal-sub" id="modal-sub">Personalise before sending</div>
-    <div class="template-tabs" id="template-tabs"></div>
     <textarea id="modal-body"></textarea>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('outreach-modal')">Cancel</button><button class="btn" onclick="copyText('modal-body',this)">Copy to Clipboard</button></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('outreach-modal')">Cancel</button>
+      <button class="btn" onclick="copyText('modal-body',this)">Copy to Clipboard</button>
+    </div>
   </div>
 </div>
 
@@ -164,12 +190,15 @@
 <div class="modal-overlay" id="connect-modal">
   <div class="modal">
     <div class="modal-title">⚡ Connect Broker → Lender</div>
-    <div class="modal-sub">Select one broker/referrer and one lender — generates a three-way intro email</div>
+    <div class="modal-sub">Select one broker and one lender — generates a three-way intro email</div>
     <div class="connect-grid">
-      <div class="connect-col"><div class="connect-col-title">🟣 Brokers & Referrers</div><div id="connect-brokers"></div></div>
+      <div class="connect-col"><div class="connect-col-title">🟣 Brokers</div><div id="connect-brokers"></div></div>
       <div class="connect-col"><div class="connect-col-title">🔵 Lenders</div><div id="connect-lenders"></div></div>
     </div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('connect-modal')">Cancel</button><button class="btn btn-purple" onclick="generateIntro()">Generate Introduction</button></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('connect-modal')">Cancel</button>
+      <button class="btn btn-purple" onclick="generateIntro()">Generate Introduction</button>
+    </div>
   </div>
 </div>
 
@@ -179,76 +208,34 @@
     <div class="modal-title" id="intro-title">Introduction Email</div>
     <div class="modal-sub" id="intro-sub"></div>
     <textarea id="intro-body"></textarea>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('intro-modal')">Close</button><button class="btn btn-purple" onclick="copyText('intro-body',this)">Copy to Clipboard</button></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('intro-modal')">Close</button>
+      <button class="btn btn-purple" onclick="copyText('intro-body',this)">Copy to Clipboard</button>
+    </div>
   </div>
 </div>
 
 <script>
-const WORKER = 'https://raspy-forest-6868.jk99r87yk5.workers.dev';
+// ── Config ──────────────────────────────────────────────────────────────────
+const CH_API_KEY = '035150a0-a960-4557-b368-3da8dc590c64';
+// CORS proxy — routes browser requests server-side so CH API responds correctly
+const PROXY = 'https://corsproxy.io/?url=';
 
-// ── SIC definitions ───────────────────────────────────────────────────────────
-const SIC_LENDERS = {
-  'all':'All Lending SICs',
-  '64921':'64921 — Credit granting',
-  '64922':'64922 — Other credit',
-  '64929':'64929 — Other credit NEC',
-  '64191':'64191 — Banks',
-  '64999':'64999 — Financial NEC',
-  '64910':'64910 — Financial leasing',
-  '64205':'64205 — Financial holding cos',
-  '64209':'64209 — Other holding cos',
-  '96090':'96090 — Other personal services',
-  '66190':'66190 — Financial auxiliaries',
-};
-
-const SIC_BROKERS = {
-  'all':'All Broker SICs',
-  '66190':'66190 — Financial auxiliaries / IFAs',
-  '66120':'66120 — Securities & commodity brokers',
-  '66220':'66220 — Insurance & finance brokers',
-  '66290':'66290 — Insurance auxiliaries',
-  '70221':'70221 — Financial management consultancy',
-  '70229':'70229 — Business management consultancy',
-  '82990':'82990 — Other business support',
-  '64300':'64300 — Trusts & funds',
-};
-
-const SIC_ACCOUNTANTS = {
-  'all':'All Accountant SICs',
-  '69201':'69201 — Accounting, audit & tax',
-  '69202':'69202 — Bookkeeping',
-  '70221':'70221 — Financial management consultancy',
-  '82912':'82912 — Credit bureaus',
-  '64991':'64991 — Security dealing own account',
-  '66110':'66110 — Financial markets administration',
-};
-
-const TARGET_LENDERS = ['64921','64922','64929','64191','64999','64910','64205','64209','96090','66190'];
-const TARGET_BROKERS = ['66190','66120','66220','66290','70221','70229','82990','64300'];
-const TARGET_ACCOUNTANTS = ['69201','69202','70221','82912','64991','66110'];
-
-const SIC_LABELS = {
-  '64921':'Credit granting','64922':'Other credit','64929':'Other credit NEC',
-  '64191':'Banks','64999':'Financial NEC','64910':'Financial leasing',
-  '64205':'Financial holding cos','64209':'Other holding cos',
-  '96090':'Other personal services','66190':'Financial auxiliaries / IFAs',
-  '66120':'Securities & commodity brokers','66220':'Insurance & finance brokers',
-  '66290':'Insurance auxiliaries','70221':'Financial management consultancy',
-  '70229':'Business management consultancy','82990':'Other business support',
-  '64300':'Trusts & funds','69201':'Accounting, audit & tax',
-  '69202':'Bookkeeping','82912':'Credit bureaus',
-  '64991':'Security dealing own account','66110':'Financial markets admin',
-};
+// ── SIC data ─────────────────────────────────────────────────────────────────
+const SIC_LENDERS  = {'all':'All Lending SICs','64921':'64921 — Credit granting','64922':'64922 — Other credit','64191':'64191 — Banks','64999':'64999 — Financial NEC'};
+const SIC_BROKERS  = {'all':'All Broker SICs','66190':'66190 — Financial auxiliaries','66120':'66120 — Securities dealing','64300':'64300 — Trusts & funds'};
+const TARGET_LENDERS = ['64921','64922','64191','64999'];
+const TARGET_BROKERS = ['66190','66120','64300'];
+const SIC_LABELS = {'64921':'Credit granting','64922':'Other credit','64191':'Banks','64999':'Financial NEC','66190':'Financial auxiliaries','66120':'Securities dealing','64300':'Trusts & funds'};
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let pipeline = JSON.parse(localStorage.getItem('nlr-v4')||'[]');
+let pipeline = JSON.parse(localStorage.getItem('nlr-v3') || '[]');
 let selectedBroker = null, selectedLender = null;
-let currentOutreachName = '', currentOutreachAddress = '', currentOutreachDate = '', currentOutreachType = '';
 
 // ── SIC dropdown ──────────────────────────────────────────────────────────────
 function updateSicOptions(){
   const mode = document.getElementById('mode-filter').value;
-  const opts = mode==='brokers' ? SIC_BROKERS : mode==='accountants' ? SIC_ACCOUNTANTS : SIC_LENDERS;
+  const opts = mode==='brokers' ? SIC_BROKERS : SIC_LENDERS;
   document.getElementById('sic-filter').innerHTML = Object.entries(opts).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
 }
 updateSicOptions();
@@ -257,119 +244,108 @@ updateSicOptions();
 function switchTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('search-tab').style.display = tab==='search'?'block':'none';
-  document.getElementById('pipeline-tab').style.display = tab==='pipeline'?'block':'none';
+  document.getElementById('search-tab').style.display  = tab==='search'   ? 'block':'none';
+  document.getElementById('pipeline-tab').style.display= tab==='pipeline' ? 'block':'none';
   if(tab==='pipeline') renderPipeline();
   updatePipelineStat();
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
 async function chFetch(path){
-  const res = await fetch(WORKER+path);
+  const target = `https://api.company-information.service.gov.uk${path}`;
+  const res = await fetch(PROXY + encodeURIComponent(target), {
+    headers:{ 'Authorization':'Basic '+btoa(CH_API_KEY+':'), 'x-requested-with':'XMLHttpRequest' }
+  });
   if(!res.ok) throw new Error(`CH API ${res.status}`);
   return res.json();
 }
+
 function daysSince(d){ return Math.floor((Date.now()-new Date(d))/86400000); }
 
 // ── Search ────────────────────────────────────────────────────────────────────
 async function runSearch(){
-  const btn = document.getElementById('search-btn');
+  const btn=document.getElementById('search-btn');
   btn.disabled=true; btn.textContent='Searching...';
-  const days = parseInt(document.getElementById('days-filter').value);
-  const sicFocus = document.getElementById('sic-filter').value;
-  const mode = document.getElementById('mode-filter').value;
-  const term = document.getElementById('search-term').value.trim();
-  const container = document.getElementById('results-container');
+  const days    = parseInt(document.getElementById('days-filter').value);
+  const sicFocus= document.getElementById('sic-filter').value;
+  const mode    = document.getElementById('mode-filter').value;
+  const term    = document.getElementById('search-term').value.trim();
+  const container=document.getElementById('results-container');
   container.innerHTML='<div class="loading"><div class="spinner"></div><div style="margin-top:8px">Querying Companies House...</div></div>';
 
   let searchTerms, targetSics;
-  if(mode==='lenders'){
-    searchTerms = term?[term]:['lending','capital','credit','loan','finance','fintech','fund','money'];
-    targetSics = sicFocus==='all'?TARGET_LENDERS:[sicFocus];
-  } else if(mode==='brokers'){
-    searchTerms = term?[term]:['broker','finance broker','mortgage broker','loan broker','advisory','financial services'];
-    targetSics = sicFocus==='all'?TARGET_BROKERS:[sicFocus];
-  } else if(mode==='accountants'){
-    searchTerms = term?[term]:['accountant','accounting','insolvency','chartered','audit','tax advisory','financial'];
-    targetSics = sicFocus==='all'?TARGET_ACCOUNTANTS:[sicFocus];
+  if(mode==='brokers'){
+    searchTerms = term?[term]:['broker','finance broker','credit broker','mortgage broker'];
+    targetSics  = sicFocus==='all'?TARGET_BROKERS:[sicFocus];
+  } else if(mode==='lenders'){
+    searchTerms = term?[term]:['lending','capital','credit finance','loan'];
+    targetSics  = sicFocus==='all'?TARGET_LENDERS:[sicFocus];
   } else {
-    searchTerms = term?[term]:['lending','broker','accountant','capital','credit','finance'];
-    targetSics = [...new Set([...TARGET_LENDERS,...TARGET_BROKERS,...TARGET_ACCOUNTANTS])];
+    searchTerms = term?[term]:['lending','broker','capital','credit'];
+    targetSics  = [...TARGET_LENDERS,...TARGET_BROKERS];
   }
 
   try{
-    let all = [];
-    // Use advanced search which supports direct SIC code filtering
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
-    const incFrom = cutoff.toISOString().split('T')[0];
-    const incTo = new Date().toISOString().split('T')[0];
-
-    for(const sic of targetSics.slice(0,8)){
-      // Advanced search by SIC code + date range — no name matching needed
-      const params = new URLSearchParams({
-        sic_codes: sic,
-        incorporated_from: incFrom,
-        incorporated_to: incTo,
-        company_status: 'active',
-        size: 100,
-        start_index: 0
-      });
-      try{
-        const data = await chFetch(`/advanced-search/companies?${params}`);
-        if(data.items) all = all.concat(data.items);
-      } catch(e){ console.warn('SIC search failed for '+sic, e); }
+    let all=[];
+    for(const q of searchTerms.slice(0,4)){
+      const data = await chFetch(`/search/companies?q=${encodeURIComponent(q)}&items_per_page=50`);
+      if(data.items) all=all.concat(data.items);
     }
-    const seen = new Set();
-    all = all.filter(c=>{ if(seen.has(c.company_number))return false; seen.add(c.company_number); return true; });
-    // Optional name filter
-    const nameFilter = term.toLowerCase();
-    const filtered = all.filter(c=> {
+    // Deduplicate
+    const seen=new Set();
+    all=all.filter(c=>{ if(seen.has(c.company_number))return false; seen.add(c.company_number); return true; });
+    // Filter by date + SIC
+    const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-days);
+    const filtered=all.filter(c=>{
       if(c.company_status!=='active') return false;
-      if(nameFilter && !c.title.toLowerCase().includes(nameFilter)) return false;
-      return true;
+      if(new Date(c.date_of_creation)<cutoff) return false;
+      return (c.sic_codes||[]).some(s=>targetSics.includes(s));
     });
     filtered.sort((a,b)=>new Date(b.date_of_creation)-new Date(a.date_of_creation));
-    const hot = filtered.filter(c=>daysSince(c.date_of_creation)<=30).length;
+
+    const hot  = filtered.filter(c=>daysSince(c.date_of_creation)<=30).length;
     const warm = filtered.filter(c=>{ const d=daysSince(c.date_of_creation); return d>30&&d<=60; }).length;
-    document.getElementById('stat-total').textContent = filtered.length;
-    document.getElementById('stat-hot').textContent = hot;
-    document.getElementById('stat-warm').textContent = warm;
-    document.getElementById('stat-time').textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('results-label').textContent = `Results — ${filtered.length} found`;
+    document.getElementById('stat-total').textContent=filtered.length;
+    document.getElementById('stat-hot').textContent=hot;
+    document.getElementById('stat-warm').textContent=warm;
+    document.getElementById('stat-time').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('results-label').textContent=`Results — ${filtered.length} found`;
     renderResults(filtered);
   } catch(err){
-    container.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red)">${err.message}</div></div>`;
+    container.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red)">${err.message}<br><br><span style="color:var(--text-muted);font-size:12px">If this keeps failing, try a different browser or check your internet connection.</span></div></div>`;
   }
   btn.disabled=false; btn.textContent='Search';
 }
 
-function getType(sics){
-  if(!sics) return 'lender';
-  if(sics.some(s=>TARGET_ACCOUNTANTS.includes(s)&&!TARGET_LENDERS.includes(s))) return 'accountant';
-  if(sics.some(s=>TARGET_BROKERS.includes(s)&&!TARGET_LENDERS.includes(s))) return 'broker';
-  return 'lender';
-}
+function isBroker(sics){ return sics&&sics.some(s=>TARGET_BROKERS.includes(s)); }
 
 function renderResults(companies){
-  const container = document.getElementById('results-container');
-  if(!companies.length){ container.innerHTML='<div class="empty-state"><div class="empty-icon">🔎</div><div class="empty-text">No matches. Try broader filters or a longer date range.</div></div>'; return; }
-  container.innerHTML = companies.map(c=>{
-    const age = daysSince(c.date_of_creation||c.incorporated_on||'2000-01-01');
-    const isHot = age<=30, isWarm = age<=60&&!isHot;
-if(!c.company_number) return '';
-    const sics = c.sic_codes||[];
-    const type = getType(sics);
-    const inP = pipeline.some(p=>p.company_number===c.company_number);
-    const oa = c.registered_office_address||{};
-    const addr = [oa.locality||oa.address_line_1, oa.postal_code].filter(Boolean).join(', ')||'Not listed';
-    const name = c.title || c.company_name || 'Unnamed company';
-    const sN = name.replace(/'/g,"\\'");
-    const cardClass = type==='accountant'?'accountant-card':type==='broker'?'broker-card':(isHot?'hot':isWarm?'warm':'');
-    const typeBadge = type==='accountant'?'<span class="badge badge-teal">ACCOUNTANT/IP</span>':type==='broker'?'<span class="badge badge-purple">BROKER</span>':'';
+  const container=document.getElementById('results-container');
+  if(!companies.length){
+    container.innerHTML='<div class="empty-state"><div class="empty-icon">🔎</div><div class="empty-text">No matches. Try broader filters.</div></div>';
+    return;
+  }
+  container.innerHTML=companies.map(c=>{
+    const age=daysSince(c.date_of_creation);
+    const isHot=age<=30, isWarm=age<=60&&!isHot;
+    const sics=c.sic_codes||[];
+    const broker=isBroker(sics);
+    const inP=pipeline.some(p=>p.company_number===c.company_number);
+    const addr=c.registered_office_address?[c.registered_office_address.locality,c.registered_office_address.postal_code].filter(Boolean).join(', '):'Not listed';
+    const name=c.title, sN=name.replace(/'/g,"\\'");
+    const cardClass=broker?'broker-card':(isHot?'hot':isWarm?'warm':'');
     return `<div class="result-card ${cardClass}">
       <div class="result-top">
-        <div><div class="company-name">${name}</div><div class="company-meta"><span>${c.company_number}</span><span>·</span><span>Inc. ${new Date(c.date_of_creation||c.incorporated_on).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span>·</span><span>${age} days old</span></div></div>
-        <div class="badges">${typeBadge}${type==='lender'&&isHot?'<span class="badge badge-green">HOT</span>':''}${type==='lender'&&isWarm?'<span class="badge badge-amber">WARM</span>':''}${sics.map(s=>`<span class="badge badge-blue">${s}</span>`).join('')}</div>
+        <div>
+          <div class="company-name">${name}</div>
+          <div class="company-meta"><span>${c.company_number}</span><span>·</span><span>Inc. ${new Date(c.date_of_creation).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span>·</span><span>${age} days old</span></div>
+        </div>
+        <div class="badges">
+          ${broker?'<span class="badge badge-purple">BROKER</span>':''}
+          ${!broker&&isHot?'<span class="badge badge-green">HOT</span>':''}
+          ${!broker&&isWarm?'<span class="badge badge-amber">WARM</span>':''}
+          ${sics.map(s=>`<span class="badge badge-blue">${s}</span>`).join('')}
+        </div>
       </div>
       <div class="result-detail">
         <div class="detail-item"><label>SIC</label><span>${sics.map(s=>SIC_LABELS[s]||s).join(', ')||'Not listed'}</span></div>
@@ -379,110 +355,96 @@ if(!c.company_number) return '';
       <div class="outreach-btn">
         <a href="https://find-and-update.company-information.service.gov.uk/company/${c.company_number}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">CH ↗</a>
         <a href="https://register.fca.org.uk/s/search?predefined=ALL&q=${encodeURIComponent(name)}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">FCA ↗</a>
-        <button class="btn ${inP?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="pipe-btn-${c.company_number}" onclick="togglePipeline('${c.company_number}','${sN}','${c.date_of_creation||c.incorporated_on}','${addr}','${type}')">${inP?'✓ In Pipeline':'+ Pipeline'}</button>
-        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="openOutreach('${sN}','${addr}','${c.date_of_creation||c.incorporated_on}','${type}')">Draft Outreach</button>
+        <button class="btn ${inP?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="pipe-btn-${c.company_number}"
+                onclick="togglePipeline('${c.company_number}','${sN}','${c.date_of_creation}','${addr}',${broker})">
+          ${inP?'✓ In Pipeline':'+ Pipeline'}
+        </button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px"
+                onclick="openOutreach('${sN}','${addr}','${c.date_of_creation}',${broker})">
+          Draft Outreach
+        </button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px;border-color:var(--purple);color:var(--purple)"
+                id="enrich-btn-${c.company_number}"
+                onclick="enrichCompany('${c.company_number}','${sN}')">
+          🔍 Enrich
+        </button>
       </div>
+      <div id="enrich-panel-${c.company_number}" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)"></div>
     </div>`;
   }).join('');
 }
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────
-function togglePipeline(number,name,date,address,type){
-  const idx = pipeline.findIndex(p=>p.company_number===number);
+function togglePipeline(number,name,date,address,broker){
+  const idx=pipeline.findIndex(p=>p.company_number===number);
   if(idx>-1){ pipeline.splice(idx,1); }
-  else{ pipeline.push({company_number:number,name,date_of_creation:date,address,type,status:'identified',added:new Date().toISOString()}); }
+  else{ pipeline.push({company_number:number,name,date_of_creation:date,address,type:broker?'broker':'lender',status:'identified',added:new Date().toISOString()}); }
   savePipeline(); updatePipelineStat();
-  const btn = document.getElementById(`pipe-btn-${number}`);
+  const btn=document.getElementById(`pipe-btn-${number}`);
   if(btn){ const inP=pipeline.some(p=>p.company_number===number); btn.textContent=inP?'✓ In Pipeline':'+ Pipeline'; btn.className=`btn ${inP?'btn-ghost':''}`; btn.style.cssText='font-size:11px;padding:6px 12px'; }
 }
-function savePipeline(){ localStorage.setItem('nlr-v4',JSON.stringify(pipeline)); }
+function savePipeline(){ localStorage.setItem('nlr-v3',JSON.stringify(pipeline)); }
 function updatePipelineStat(){ document.getElementById('stat-pipeline').textContent=pipeline.length; document.getElementById('pipe-count').textContent=pipeline.length; }
 function clearPipeline(){ if(!confirm('Clear all pipeline entries?'))return; pipeline=[]; savePipeline(); updatePipelineStat(); renderPipeline(); }
 
 function renderPipeline(){
-  const c = document.getElementById('pipeline-container');
+  const c=document.getElementById('pipeline-container');
   if(!pipeline.length){ c.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No companies added yet.</div></div>'; return; }
-  const typeColor = t => t==='broker'?'badge-purple':t==='accountant'?'badge-teal':'badge-blue';
-  c.innerHTML=`<div class="pipeline-wrap"><table><thead><tr><th>Company</th><th>Type</th><th>Inc. Date</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead><tbody>${pipeline.map(p=>`<tr>
-    <td style="color:var(--text);font-weight:500">${p.name}<br><span style="font-size:10px;font-family:var(--mono);color:var(--text-muted)">${p.company_number}</span></td>
-    <td><span class="badge ${typeColor(p.type)}">${p.type.toUpperCase()}</span></td>
-    <td>${new Date(p.date_of_creation).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}<br><span style="font-size:10px;color:var(--text-muted)">${daysSince(p.date_of_creation)}d old</span></td>
-    <td style="font-size:12px">${p.address||'—'}</td>
-    <td><select class="status-select" onchange="updateStatus('${p.company_number}',this.value)">${['identified','researching','contacted','replied','meeting','closed','dead'].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}</select></td>
-    <td><div style="display:flex;gap:6px">
-      <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px" onclick="openOutreach('${p.name.replace(/'/g,"\\'")}','${p.address}','${p.date_of_creation}','${p.type}')">Draft</button>
-      <a href="https://find-and-update.company-information.service.gov.uk/company/${p.company_number}" target="_blank" class="btn btn-ghost" style="font-size:10px;padding:4px 9px;text-decoration:none;display:inline-block">CH ↗</a>
-      <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px;color:var(--red);border-color:var(--red)" onclick="removePipeline('${p.company_number}')">✕</button>
-    </div></td>
-  </tr>`).join('')}</tbody></table></div>`;
+  c.innerHTML=`<div class="pipeline-wrap"><table>
+    <thead><tr><th>Company</th><th>Type</th><th>Inc. Date</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${pipeline.map(p=>`<tr>
+      <td style="color:var(--text);font-weight:500">${p.name}<br><span style="font-size:10px;font-family:var(--mono);color:var(--text-muted)">${p.company_number}</span></td>
+      <td><span class="badge ${p.type==='broker'?'badge-purple':'badge-blue'}">${p.type.toUpperCase()}</span></td>
+      <td>${new Date(p.date_of_creation).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}<br><span style="font-size:10px;color:var(--text-muted)">${daysSince(p.date_of_creation)}d old</span></td>
+      <td style="font-size:12px">${p.address||'—'}</td>
+      <td><select class="status-select" onchange="updateStatus('${p.company_number}',this.value)">
+        ${['identified','researching','contacted','replied','meeting','closed','dead'].map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}
+      </select></td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px" onclick="openOutreach('${p.name.replace(/'/g,"\\'")}','${p.address}','${p.date_of_creation}',${p.type==='broker'})">Draft</button>
+        <a href="https://find-and-update.company-information.service.gov.uk/company/${p.company_number}" target="_blank" class="btn btn-ghost" style="font-size:10px;padding:4px 9px;text-decoration:none;display:inline-block">CH ↗</a>
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 9px;color:var(--red);border-color:var(--red)" onclick="removePipeline('${p.company_number}')">✕</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
 }
 function updateStatus(number,status){ const item=pipeline.find(p=>p.company_number===number); if(item){item.status=status;savePipeline();} }
 function removePipeline(number){ pipeline=pipeline.filter(p=>p.company_number!==number); savePipeline(); updatePipelineStat(); renderPipeline(); }
 
-// ── Outreach templates ────────────────────────────────────────────────────────
-function getTemplates(name, address, incDate){
-  const monthYear = new Date(incDate).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-  return {
-    lender: `Subject: Credit underwriting infrastructure — ${name}\n\nHi [Director's name],\n\nI noticed ${name} was incorporated in ${monthYear} — congratulations on getting the business moving.\n\nI work with new lenders at the point where they're building their credit infrastructure: underwriting policy, decisioning frameworks, risk appetite statements, and staff onboarding. Getting it wrong early is expensive.\n\nI'm a Senior Underwriter with a decade across SME credit, fraud analysis, and risk governance. I've built credit policy from scratch for lenders at exactly your stage.\n\nIf you're still building out your underwriting function — or haven't started yet — it might be worth a 20-minute call.\n\nNo pitch, no deck. Just a conversation.\n\nBest,\nJP\nAmbit Solutions Ltd\n[Email / LinkedIn]`,
-
-    broker: `Subject: Working with new lenders — ${name}\n\nHi [Director's name],\n\nI noticed ${name} was incorporated in ${monthYear} — congratulations on getting the business moving.\n\nI work with newly launched brokerages to help them establish and formalise lender relationships — from identifying the right panel to navigating lender credit appetite and underwriting requirements.\n\nI'm a Senior Underwriter with a decade across SME credit and risk. I know how lenders think, which means I can help you position deals to get the best outcomes for your clients from day one.\n\nIf you're still building your lender panel or haven't locked in your first relationships yet, it might be worth a quick call.\n\nBest,\nJP\nAmbit Solutions Ltd\n[Email / LinkedIn]`,
-
-    accountant: `Subject: Funding referrals for your SME clients — ${name}\n\nHi [Director's name],\n\nI noticed ${name} was incorporated in ${monthYear} — congratulations on getting started.\n\nI work with accountants and insolvency practitioners to help their SME clients access the right funding — whether that's working capital, growth finance, or restructuring options. I handle the whole process: lender identification, application packaging, and negotiation.\n\nFor you it's straightforward — your client gets a better outcome, and you get a reliable referral partner who understands credit and won't waste anyone's time.\n\nIf you have clients who are struggling to access finance through traditional routes, or who need funding quickly, it might be worth a conversation.\n\nNo fees to you. No obligation.\n\nBest,\nJP\nAmbit Solutions Ltd\n[Email / LinkedIn]`
-  };
-}
-
-function openOutreach(name, address, incDate, type){
-  currentOutreachName=name; currentOutreachAddress=address; currentOutreachDate=incDate; currentOutreachType=type;
-  const age = daysSince(incDate);
-  const templates = getTemplates(name, address, incDate);
-
-  // Build template tabs — show all three always so they can switch
-  const tabs = [
-    {key:'lender', label:'Lender'},
-    {key:'broker', label:'Broker'},
-    {key:'accountant', label:'Accountant/IP'}
-  ];
-
-  document.getElementById('template-tabs').innerHTML = tabs.map(t=>
-    `<button class="t-tab ${t.key===type?'active':''}" onclick="switchTemplate('${t.key}')">${t.label}</button>`
-  ).join('');
-
-  document.getElementById('modal-title').textContent = `Outreach — ${name}`;
-  document.getElementById('modal-sub').textContent = `${age} days since incorporation · ${address}`;
-  document.getElementById('modal-body').value = templates[type] || templates.lender;
+// ── Outreach ──────────────────────────────────────────────────────────────────
+function openOutreach(name,address,incDate,broker){
+  const age=daysSince(incDate);
+  const monthYear=new Date(incDate).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const t=broker
+    ?`Subject: Working with new lenders — ${name}\n\nHi [Director's name],\n\nI noticed ${name} was incorporated in ${monthYear} — congratulations on getting the business moving.\n\nI work with newly launched brokerages to help them establish and formalise lender relationships — from identifying the right panel to navigating lender credit appetite and underwriting requirements.\n\nI'm a Senior Underwriter with a decade across SME credit and risk. I know how lenders think, which means I can help you position deals to get the best outcomes for your clients from day one.\n\nIf you're still building your lender panel or haven't locked in your first relationships yet, it might be worth a quick call.\n\nBest,\nJP\n[Your Ltd company name]\n[Email / LinkedIn]`
+    :`Subject: Credit underwriting infrastructure — ${name}\n\nHi [Director's name],\n\nI noticed ${name} was incorporated in ${monthYear} — congratulations on getting the business moving.\n\nI work with new lenders at the point where they're building their credit infrastructure: underwriting policy, decisioning frameworks, risk appetite statements, and staff onboarding. Getting it wrong early is expensive.\n\nI'm a Senior Underwriter with a decade across SME credit, fraud analysis, and risk governance. I've built credit policy from scratch for lenders at exactly your stage.\n\nIf you're still building out your underwriting function — or haven't started yet — it might be worth a 20-minute call.\n\nNo pitch, no deck. Just a conversation.\n\nBest,\nJP\n[Your Ltd company name]\n[Email / LinkedIn]`;
+  document.getElementById('modal-title').textContent=`Outreach — ${name}`;
+  document.getElementById('modal-sub').textContent=`${age} days since incorporation · ${address}`;
+  document.getElementById('modal-body').value=t;
   document.getElementById('outreach-modal').classList.add('open');
-}
-
-function switchTemplate(type){
-  document.querySelectorAll('.t-tab').forEach(t=>t.classList.remove('active'));
-  event.target.classList.add('active');
-  const templates = getTemplates(currentOutreachName, currentOutreachAddress, currentOutreachDate);
-  document.getElementById('modal-body').value = templates[type];
 }
 
 // ── Connect ───────────────────────────────────────────────────────────────────
 function openConnectModal(){
-  const referrers = pipeline.filter(p=>p.type==='broker'||p.type==='accountant');
-  const lenders = pipeline.filter(p=>p.type==='lender');
-  document.getElementById('connect-brokers').innerHTML = referrers.length
-    ?referrers.map(b=>`<div class="connect-item" id="cb-${b.company_number}" onclick="selectConnect('broker','${b.company_number}','${b.name.replace(/'/g,"\\'")}')"><input type="radio" name="bp"> ${b.name} <span style="font-size:10px;color:var(--text-muted)">(${b.type})</span></div>`).join('')
-    :'<div style="font-size:12px;color:var(--text-muted);padding:8px">No brokers or referrers in pipeline.</div>';
-  document.getElementById('connect-lenders').innerHTML = lenders.length
+  const brokers=pipeline.filter(p=>p.type==='broker');
+  const lenders=pipeline.filter(p=>p.type==='lender');
+  document.getElementById('connect-brokers').innerHTML=brokers.length
+    ?brokers.map(b=>`<div class="connect-item" id="cb-${b.company_number}" onclick="selectConnect('broker','${b.company_number}','${b.name.replace(/'/g,"\\'")}')"><input type="radio" name="bp"> ${b.name}</div>`).join('')
+    :'<div style="font-size:12px;color:var(--text-muted);padding:8px">No brokers in pipeline.</div>';
+  document.getElementById('connect-lenders').innerHTML=lenders.length
     ?lenders.map(l=>`<div class="connect-item" id="cl-${l.company_number}" onclick="selectConnect('lender','${l.company_number}','${l.name.replace(/'/g,"\\'")}')"><input type="radio" name="lp"> ${l.name}</div>`).join('')
     :'<div style="font-size:12px;color:var(--text-muted);padding:8px">No lenders in pipeline.</div>';
   selectedBroker=null; selectedLender=null;
   document.getElementById('connect-modal').classList.add('open');
 }
-
 function selectConnect(type,number,name){
   if(type==='broker'){ selectedBroker={number,name}; document.querySelectorAll('[id^=cb-]').forEach(e=>e.classList.remove('selected')); document.getElementById(`cb-${number}`).classList.add('selected'); document.querySelector(`#cb-${number} input`).checked=true; }
   else{ selectedLender={number,name}; document.querySelectorAll('[id^=cl-]').forEach(e=>e.classList.remove('selected')); document.getElementById(`cl-${number}`).classList.add('selected'); document.querySelector(`#cl-${number} input`).checked=true; }
 }
-
 function generateIntro(){
-  if(!selectedBroker||!selectedLender){ alert('Select one broker/referrer and one lender.'); return; }
+  if(!selectedBroker||!selectedLender){ alert('Select one broker and one lender.'); return; }
   closeModal('connect-modal');
-  const intro=`Subject: Introduction — ${selectedBroker.name} × ${selectedLender.name}\n\nHi [Contact at ${selectedBroker.name}] and [Contact at ${selectedLender.name}],\n\nI wanted to connect you both — I think there's a natural fit here.\n\n${selectedBroker.name} is a newly established business working with SME clients who need access to flexible credit facilities. They're actively building their lender relationships.\n\n${selectedLender.name} is a newly authorised lender looking to build a quality introducer network from the ground up.\n\nBoth of you are at an early stage where the right relationships define the business — which is exactly why I think it's worth a conversation.\n\nI've worked across both sides of this market for a decade, and I'm happy to facilitate an initial call if useful.\n\nBest,\nJP\nAmbit Solutions Ltd\n[Email / LinkedIn]`;
+  const intro=`Subject: Introduction — ${selectedBroker.name} × ${selectedLender.name}\n\nHi [Broker Director] and [Lender Director],\n\nI wanted to connect you both — I think there's a natural fit here.\n\n${selectedBroker.name} is a newly established brokerage building out their lender panel. They're working with SME clients who need access to flexible credit facilities.\n\n${selectedLender.name} is a newly authorised lender looking to build a quality introducer network from the ground up.\n\nBoth of you are at an early stage where the right relationships define the business — which is exactly why I think it's worth a conversation.\n\nI've worked across both sides of this market for a decade, and I'm happy to facilitate an initial call if useful.\n\nBest,\nJP\n[Your Ltd company name]\n[Email / LinkedIn]`;
   document.getElementById('intro-title').textContent=`Intro: ${selectedBroker.name} × ${selectedLender.name}`;
   document.getElementById('intro-sub').textContent='Positions you as the connector — send to both parties';
   document.getElementById('intro-body').value=intro;
@@ -491,12 +453,225 @@ function generateIntro(){
 
 // ── Modals ────────────────────────────────────────────────────────────────────
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-['outreach-modal','connect-modal','intro-modal'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)closeModal(id); });
-});
+['outreach-modal','connect-modal','intro-modal'].forEach(id=>{ document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)closeModal(id); }); });
 function copyText(id,btn){ navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent=o,2000); }); }
 
 updatePipelineStat();
+
+// ── Enrichment ────────────────────────────────────────────────────────────────
+
+// Cache: company_number → enriched data
+const enrichCache = {};
+
+async function enrichCompany(number, name){
+  const btn   = document.getElementById(`enrich-btn-${number}`);
+  const panel = document.getElementById(`enrich-panel-${number}`);
+
+  // Toggle off if already open
+  if(panel.style.display !== 'none' && panel.innerHTML !== ''){
+    panel.style.display = 'none';
+    btn.textContent = '🔍 Enrich';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Enriching...';
+  panel.style.display = 'block';
+  panel.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Fetching directors & linked companies...</div>';
+
+  try {
+    let data = enrichCache[number];
+    if(!data){
+      data = await fetchEnrichmentData(number, name);
+      enrichCache[number] = data;
+    }
+    panel.innerHTML = renderEnrichPanel(data);
+  } catch(err){
+    panel.innerHTML = `<div style="font-size:12px;color:var(--red)">Enrichment failed: ${err.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Hide';
+}
+
+async function fetchEnrichmentData(number, name){
+  // 1. Fetch officers
+  const officersData = await chFetch(`/company/${number}/officers?items_per_page=50`);
+  const activeOfficers = (officersData.items || []).filter(o => !o.resigned_on);
+
+  // 2. For each officer, fetch their appointments (linked companies)
+  const directors = [];
+  for(const officer of activeOfficers.slice(0, 8)){ // cap at 8
+    const apptUrl = officer.links?.officer?.appointments;
+    let appointments = [];
+    if(apptUrl){
+      try{
+        const apptData = await chFetch(apptUrl + '?items_per_page=20');
+        appointments = (apptData.items || [])
+          .filter(a => a.resigned_on == null && a.appointed_to?.company_number !== number)
+          .map(a => ({
+            name:    a.appointed_to?.company_name || 'Unknown',
+            number:  a.appointed_to?.company_number || '',
+            role:    a.officer_role || '',
+            domain:  guessDomain(a.appointed_to?.company_name || ''),
+          }));
+      } catch(_){}
+    }
+    directors.push({
+      name:         officer.name,
+      role:         officer.officer_role || 'Director',
+      appointed:    officer.appointed_on || '',
+      nationality:  officer.nationality || '',
+      appointments,
+    });
+  }
+
+  // 3. Guess domain & scrape contact
+  const domain  = guessDomain(name);
+  const contact = await scrapeContact(domain, name);
+
+  return { number, name, directors, domain, contact };
+}
+
+function guessDomain(companyName){
+  if(!companyName) return null;
+  // Strip legal suffixes
+  let slug = companyName
+    .replace(/\b(limited|ltd|llp|plc|cic|group|holdings|uk|services|solutions|capital|finance|financial)\b/gi, '')
+    .replace(/[^a-z0-9]+/gi, '')
+    .toLowerCase()
+    .trim();
+  if(!slug || slug.length < 3) return null;
+  return slug + '.co.uk';
+}
+
+async function scrapeContact(domain, companyName){
+  if(!domain) return { phones: [], emails: [], confidence: 'none', source: null };
+
+  // Try /contact page first, then root
+  const pages = [
+    `https://corsproxy.io/?url=${encodeURIComponent('https://'+domain+'/contact')}`,
+    `https://corsproxy.io/?url=${encodeURIComponent('https://'+domain)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent('https://www.'+domain+'/contact')}`,
+    `https://corsproxy.io/?url=${encodeURIComponent('https://www.'+domain)}`,
+  ];
+
+  const phoneRe = /(?:(?:\+44|0044)\s?)?(?:(?:0[1-9]\d{2,4}|\(0[1-9]\d{2,4}\))\s?\d{3,6}\s?\d{3,4}|07\d{3}\s?\d{6}|0800\s?\d{3}\s?\d{4})/g;
+  const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+
+  for(let i=0; i<pages.length; i++){
+    try{
+      const resp = await fetch(pages[i], { signal: AbortSignal.timeout(6000) });
+      if(!resp.ok) continue;
+      const html = await resp.text();
+      // Strip HTML tags for cleaner matching
+      const text = html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+
+      const phones = [...new Set((text.match(phoneRe)||[]).map(p=>p.replace(/\s/g,'')))]
+        .filter(p=>p.length>=10&&p.length<=14)
+        .slice(0,5);
+      const emails = [...new Set((text.match(emailRe)||[]))]
+        .filter(e=>!e.includes('example')&&!e.includes('domain'))
+        .slice(0,5);
+
+      if(phones.length || emails.length){
+        const isContact = pages[i].includes('/contact');
+        const matchesName = text.toLowerCase().includes(companyName.split(' ')[0].toLowerCase());
+        const confidence =
+          (isContact && matchesName) ? 'high' :
+          (isContact || matchesName) ? 'medium' : 'low';
+        return { phones, emails, confidence, source: domain + (isContact?'/contact':'') };
+      }
+    } catch(_){}
+  }
+  return { phones: [], emails: [], confidence: 'none', source: domain };
+}
+
+function confidenceBadge(level){
+  const map = {
+    high:   ['badge-green',  'HIGH'],
+    medium: ['badge-amber',  'MED'],
+    low:    ['badge-blue',   'LOW'],
+    none:   ['badge-purple', 'NONE'],
+  };
+  const [cls,label] = map[level]||map.none;
+  return `<span class="badge ${cls}" title="Confidence that contact info belongs to this company">${label}</span>`;
+}
+
+function renderEnrichPanel(data){
+  const { name, directors, domain, contact } = data;
+  let html = '';
+
+  // ── Contact info ───────────────────────────────────────────────────────────
+  html += `<div style="margin-bottom:14px">
+    <div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+      Contact Intelligence ${confidenceBadge(contact.confidence)}
+      ${domain?`<a href="https://${domain}" target="_blank" style="color:var(--accent);margin-left:8px;font-size:10px">${domain} ↗</a>`:''}
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">`;
+
+  if(contact.phones.length){
+    html += `<div>
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">PHONE</div>
+      ${contact.phones.map(p=>`<div style="font-size:12px;font-family:var(--mono);color:var(--text)">${p}</div>`).join('')}
+    </div>`;
+  } else {
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">No phone found${domain?' on '+contact.source:' — no domain guessed'}</div>`;
+  }
+
+  if(contact.emails.length){
+    html += `<div>
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">EMAIL</div>
+      ${contact.emails.map(e=>`<div style="font-size:12px;font-family:var(--mono);color:var(--text)">${e}</div>`).join('')}
+    </div>`;
+  }
+
+  html += `</div></div>`;
+
+  // ── Directors ──────────────────────────────────────────────────────────────
+  if(!directors.length){
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">No active officers found on Companies House.</div>`;
+    return html;
+  }
+
+  html += `<div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Directors & Linked Companies</div>`;
+
+  for(const dir of directors){
+    const role = (dir.role||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    const linked = dir.appointments.length;
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${linked?'10px':'0'}">
+        <div>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">${dir.name}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:8px;font-family:var(--mono)">${role}</span>
+          ${dir.nationality?`<span style="font-size:10px;color:var(--text-muted);margin-left:6px">· ${dir.nationality}</span>`:''}
+        </div>
+        ${linked?`<span class="badge badge-purple">${linked} linked co${linked!==1?'s':''}</span>`:'<span style="font-size:10px;color:var(--text-muted)">No other appointments</span>'}
+      </div>`;
+
+    if(linked){
+      html += `<div style="display:flex;flex-direction:column;gap:4px">`;
+      for(const apt of dir.appointments.slice(0,8)){
+        const aptDomain = apt.domain;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--surface);border-radius:5px;font-size:11px">
+          <span style="color:var(--accent);font-family:var(--mono);min-width:90px">${apt.number||'—'}</span>
+          <span style="color:var(--text-dim);flex:1">${apt.name}</span>
+          ${aptDomain?`<a href="https://${aptDomain}" target="_blank" style="color:var(--text-muted);text-decoration:none;font-size:10px">↗ ${aptDomain}</a>`:''}
+          <a href="https://find-and-update.company-information.service.gov.uk/company/${apt.number}" target="_blank" style="color:var(--text-muted);font-size:10px">CH ↗</a>
+        </div>`;
+      }
+      if(dir.appointments.length > 8){
+        html += `<div style="font-size:10px;color:var(--text-muted);padding:3px 8px">+ ${dir.appointments.length-8} more on CH profile</div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  return html;
+}
+
 </script>
 </body>
 </html>
