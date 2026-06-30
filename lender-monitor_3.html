@@ -99,7 +99,18 @@
   .director-row:last-child{border-bottom:none;}
   .director-name{font-size:13px;color:var(--text);font-weight:500;}
   .director-role{font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-top:2px;}
-  @media(max-width:800px){.controls{grid-template-columns:1fr 1fr;}.stats-row{grid-template-columns:1fr 1fr;}.result-detail{grid-template-columns:1fr 1fr;}.connect-grid{grid-template-columns:1fr;}}
+  .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-dim);}
+  .drop-zone input[type=file]{display:none;}
+  .drop-zone-icon{font-size:32px;margin-bottom:10px;opacity:.5;}
+  .drop-zone-text{font-size:13px;color:var(--text-muted);line-height:1.6;}
+  .drop-zone-text strong{color:var(--accent);cursor:pointer;}
+  .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .mapper-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;padding:8px 10px;background:var(--surface2);border-radius:6px;}
+  .mapper-label{font-size:11px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;}
+  .import-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .import-stat{font-size:11px;font-family:var(--mono);color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:5px;}
+  @media(max-width:800px){.controls{grid-template-columns:1fr 1fr;}.stats-row{grid-template-columns:1fr 1fr;}.result-detail{grid-template-columns:1fr 1fr;}.connect-grid{grid-template-columns:1fr;}.mapper-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -119,6 +130,7 @@
   </div>
   <div class="tab-row">
     <button class="tab active" onclick="switchTab('search',this)">Prospect Search</button>
+    <button class="tab" onclick="switchTab('import',this)">Import CSV</button>
     <button class="tab" onclick="switchTab('pipeline',this)">My Pipeline</button>
   </div>
 
@@ -170,6 +182,37 @@
     </div>
   </div>
 
+  <!-- Import CSV tab -->
+  <div id="import-tab" style="display:none">
+    <div class="section-header">
+      <div class="section-title">Import CSV Leads (<span id="import-count">0</span>)</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="document.getElementById('csv-file-input').click()">Upload New CSV</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px;color:var(--red);border-color:var(--red)" onclick="clearImported()">Clear All</button>
+      </div>
+    </div>
+    <div id="import-drop-area">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleDrop(event)">
+        <input type="file" id="csv-file-input" accept=".csv,text/csv" onchange="handleFileSelect(event)">
+        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-text">
+          <strong>Click to upload</strong> or drag & drop a CSV file<br>
+          <span style="font-size:11px">Detects columns automatically — name, address, domain, email, company number, type, date</span>
+        </div>
+      </div>
+    </div>
+    <div id="import-stats-row" style="display:none;margin-top:16px"></div>
+    <div class="results-container" id="import-results" style="margin-top:16px">
+      <div class="empty-state" id="import-empty">
+        <div class="empty-icon">📥</div>
+        <div class="empty-text">Upload a CSV to import existing leads.<br>All search and outreach features work on imported leads too.</div>
+      </div>
+    </div>
+  </div>
+
   <div id="pipeline-tab" style="display:none">
     <div class="section-header">
       <div class="section-title">Outreach Pipeline (<span id="pipe-count">0</span>)</div>
@@ -198,6 +241,19 @@
       <button class="btn btn-ghost" onclick="closeModal('outreach-modal')">Cancel</button>
       <button class="btn btn-cyan" id="li-open-btn" style="display:none" onclick="openLinkedInSearch()">Open LI Company ↗</button>
       <button class="btn" onclick="copyText('modal-body',this)">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV Column Mapper Modal -->
+<div class="modal-overlay" id="mapper-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title">Map CSV Columns</div>
+    <div class="modal-sub" id="mapper-sub">Match your CSV headers to the fields below. Only Name is required.</div>
+    <div id="mapper-fields" style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('mapper-modal')">Cancel</button>
+      <button class="btn" onclick="applyMapping()">Import Leads</button>
     </div>
   </div>
 </div>
@@ -273,9 +329,11 @@ updateSicOptions();
 function switchTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('search-tab').style.display  = tab==='search'   ? 'block':'none';
-  document.getElementById('pipeline-tab').style.display= tab==='pipeline' ? 'block':'none';
+  document.getElementById('search-tab').style.display   = tab==='search'   ? 'block':'none';
+  document.getElementById('import-tab').style.display   = tab==='import'   ? 'block':'none';
+  document.getElementById('pipeline-tab').style.display = tab==='pipeline' ? 'block':'none';
   if(tab==='pipeline') renderPipeline();
+  if(tab==='import') renderImported();
   updatePipelineStat();
 }
 
@@ -298,6 +356,223 @@ async function chFetch(path){
 }
 
 function daysSince(d){ return Math.floor((Date.now()-new Date(d))/86400000); }
+
+// ── CSV Import ────────────────────────────────────────────────────────────────
+let importedLeads = JSON.parse(localStorage.getItem('nlr-imported') || '[]');
+let csvHeaders = [], csvRows = [], csvMapping = {};
+
+const FIELD_DEFS = [
+  {key:'name',    label:'Company Name',      required:true,  hints:['name','company','organisation','organization','firm']},
+  {key:'number',  label:'Company Number',    required:false, hints:['number','reg','registration','company_no','companyno','ch']},
+  {key:'type',    label:'Type (lender/broker)', required:false, hints:['type','category','kind','lender','broker']},
+  {key:'address', label:'Address',           required:false, hints:['address','location','registered','city','town','postcode']},
+  {key:'domain',  label:'Website / Domain',  required:false, hints:['domain','website','url','web','site']},
+  {key:'email',   label:'Email',             required:false, hints:['email','e-mail','contact','mail']},
+  {key:'date',    label:'Incorporation Date',required:false, hints:['date','incorporated','inc','founded','created','inception']},
+  {key:'notes',   label:'Notes',             required:false, hints:['notes','note','comment','comments','description','detail']},
+];
+
+function autoMatch(header){
+  const h = header.toLowerCase().replace(/[\s_-]/g,'');
+  for(const f of FIELD_DEFS){
+    if(f.hints.some(hint=>h.includes(hint.replace(/[\s_-]/g,'')))) return f.key;
+  }
+  return '';
+}
+
+function parseCSV(text){
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  if(!lines.length) return {headers:[],rows:[]};
+  const parse = line => {
+    const out=[]; let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
+      else if(ch===','&&!inQ){ out.push(cur.trim()); cur=''; }
+      else cur+=ch;
+    }
+    out.push(cur.trim()); return out;
+  };
+  const headers = parse(lines[0]);
+  const rows = lines.slice(1).map(parse).filter(r=>r.some(c=>c));
+  return {headers, rows};
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if(file) loadCSVFile(file);
+}
+function handleFileSelect(e){ const f=e.target.files[0]; if(f) loadCSVFile(f); e.target.value=''; }
+
+function loadCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const {headers,rows} = parseCSV(ev.target.result);
+    if(!headers.length){ alert('Could not parse CSV. Check the file format.'); return; }
+    csvHeaders = headers; csvRows = rows;
+    csvMapping = {};
+    headers.forEach(h=>{ const m=autoMatch(h); if(m&&!Object.values(csvMapping).includes(m)) csvMapping[h]=m; });
+    showMapperModal(headers, rows.length);
+  };
+  reader.readAsText(file);
+}
+
+function showMapperModal(headers, rowCount){
+  document.getElementById('mapper-sub').textContent = `${rowCount} rows detected · Match columns to fields (Name is required)`;
+  document.getElementById('mapper-fields').innerHTML = headers.map(h=>{
+    const options = FIELD_DEFS.map(f=>`<option value="${f.key}" ${csvMapping[h]===f.key?'selected':''}>${f.label}${f.required?' *':''}</option>`).join('');
+    return `<div class="mapper-row">
+      <div class="mapper-label">${h}</div>
+      <select onchange="csvMapping['${h}']=this.value" style="width:100%">
+        <option value="">— Skip —</option>
+        ${options}
+      </select>
+    </div>`;
+  }).join('');
+  document.getElementById('mapper-modal').classList.add('open');
+}
+
+function applyMapping(){
+  const nameCols = Object.entries(csvMapping).filter(([,v])=>v==='name').map(([k])=>k);
+  if(!nameCols.length){ alert('Please map at least one column to Company Name.'); return; }
+  closeModal('mapper-modal');
+
+  const reverseMap = {};
+  Object.entries(csvMapping).forEach(([col,field])=>{ if(field) reverseMap[field]=col; });
+
+  const getCol = (row, field) => {
+    const col = reverseMap[field];
+    if(!col) return '';
+    const idx = csvHeaders.indexOf(col);
+    return idx>-1 ? (row[idx]||'').trim() : '';
+  };
+
+  const leads = csvRows.map((row,i)=>{
+    const name = getCol(row,'name');
+    if(!name) return null;
+    let type = getCol(row,'type').toLowerCase();
+    if(!['lender','broker'].includes(type)) type = 'lender';
+    let domain = getCol(row,'domain');
+    if(domain && !domain.startsWith('http')) domain = 'https://'+domain;
+    return {
+      id: 'csv-'+i+'-'+Date.now(),
+      name, type,
+      number: getCol(row,'number'),
+      address: getCol(row,'address'),
+      domain,
+      email: getCol(row,'email'),
+      date: getCol(row,'date'),
+      notes: getCol(row,'notes'),
+      status: 'identified',
+      source: 'csv'
+    };
+  }).filter(Boolean);
+
+  importedLeads = leads;
+  localStorage.setItem('nlr-imported', JSON.stringify(importedLeads));
+  renderImported();
+  document.getElementById('import-empty').style.display='none';
+}
+
+function clearImported(){
+  if(!importedLeads.length) return;
+  if(!confirm('Clear all imported leads?')) return;
+  importedLeads=[];
+  localStorage.setItem('nlr-imported','[]');
+  renderImported();
+}
+
+function renderImported(){
+  const count = importedLeads.length;
+  document.getElementById('import-count').textContent = count;
+  const statsRow = document.getElementById('import-stats-row');
+  if(!count){
+    statsRow.style.display='none';
+    document.getElementById('import-results').innerHTML='<div class="empty-state" id="import-empty"><div class="empty-icon">📥</div><div class="empty-text">Upload a CSV to import existing leads.<br>All search and outreach features work on imported leads too.</div></div>';
+    return;
+  }
+  const lenders = importedLeads.filter(l=>l.type==='lender').length;
+  const brokers = importedLeads.filter(l=>l.type==='broker').length;
+  const withDomain = importedLeads.filter(l=>l.domain).length;
+  const withEmail = importedLeads.filter(l=>l.email).length;
+  statsRow.style.display='flex';
+  statsRow.innerHTML=`
+    <div class="import-stat">${count} total</div>
+    <div class="import-stat">${lenders} lenders</div>
+    <div class="import-stat">${brokers} brokers</div>
+    <div class="import-stat">${withDomain} with website</div>
+    <div class="import-stat">${withEmail} with email</div>`;
+
+  document.getElementById('import-results').innerHTML = importedLeads.map(lead=>{
+    const inP = pipeline.some(p=>p.company_number===lead.id||p.company_number===lead.number);
+    const pipeId = lead.number||lead.id;
+    const liCoUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(lead.name)}`;
+    const googleUrl = lead.domain ? lead.domain : `https://www.google.com/search?q=${encodeURIComponent(lead.name)}`;
+    const signupUrl = lead.domain
+      ? `https://www.google.com/search?q=site:${encodeURIComponent(lead.domain.replace(/https?:\/\//,''))} "sign up" OR register OR "get started"`
+      : `https://www.google.com/search?q=${encodeURIComponent(lead.name+' "sign up" OR register OR "contact us"')}`;
+    const dirBtn = lead.number
+      ? `<button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openDirectorsModal('${lead.number}','${esc(lead.name)}')">Directors 👤</button>`
+      : `<a href="https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(lead.name+' director')}" target="_blank" class="btn btn-cyan" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">People LI ↗</a>`;
+    const emailBtn = lead.email
+      ? `<a href="mailto:${lead.email}" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">✉ Email</a>`
+      : '';
+    const chBtn = lead.number
+      ? `<a href="https://find-and-update.company-information.service.gov.uk/company/${lead.number}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">CH ↗</a>`
+      : '';
+    const fcaBtn = `<a href="https://register.fca.org.uk/s/search?predefined=ALL&q=${encodeURIComponent(lead.name)}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">FCA ↗</a>`;
+    const typeClass = lead.type==='broker' ? 'broker-card' : '';
+    const typeBadge = lead.type==='broker' ? '<span class="badge badge-purple">BROKER</span>' : '<span class="badge badge-blue">LENDER</span>';
+    return `<div class="result-card ${typeClass}">
+      <div class="result-top">
+        <div>
+          <div class="company-name">${lead.name}</div>
+          <div class="company-meta">
+            ${lead.number?`<span>${lead.number}</span><span>·</span>`:''}
+            ${lead.address?`<span>${lead.address}</span>`:''}
+            ${lead.date?`<span>·</span><span>Inc. ${lead.date}</span>`:''}
+            ${lead.notes?`<span>·</span><span style="font-style:italic">${lead.notes}</span>`:''}
+          </div>
+        </div>
+        <div class="badges">${typeBadge}<span class="badge" style="background:rgba(99,102,241,0.1);color:#818cf8">CSV</span></div>
+      </div>
+      ${lead.domain||lead.email?`<div class="result-detail">
+        ${lead.domain?`<div class="detail-item"><label>Website</label><span><a href="${lead.domain}" target="_blank" style="color:var(--accent)">${lead.domain.replace(/https?:\/\//,'')}</a></span></div>`:''}
+        ${lead.email?`<div class="detail-item"><label>Email</label><span><a href="mailto:${lead.email}" style="color:var(--accent)">${lead.email}</a></span></div>`:''}
+      </div>`:''}
+      <div class="outreach-btn">
+        ${chBtn}${fcaBtn}
+        ${chBtn||fcaBtn?'<div class="outreach-divider"></div>':''}
+        <a href="${liCoUrl}" target="_blank" class="btn btn-cyan" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">LI Co ↗</a>
+        ${dirBtn}
+        <div class="outreach-divider"></div>
+        <a href="${googleUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Website 🌐</a>
+        <a href="${signupUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Sign-up 📋</a>
+        ${emailBtn}
+        <div class="outreach-divider"></div>
+        <button class="btn ${inP?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="pipe-btn-${pipeId}"
+                onclick="togglePipelineImport('${pipeId}','${esc(lead.name)}','${lead.date||''}','${esc(lead.address||'')}',${lead.type==='broker'})">
+          ${inP?'✓ In Pipeline':'+ Pipeline'}
+        </button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px"
+                onclick="openOutreach('${esc(lead.name)}','${esc(lead.address||'')}','${lead.date||new Date().toISOString().slice(0,10)}',${lead.type==='broker'})">
+          Draft Outreach
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function togglePipelineImport(id, name, date, address, broker){
+  const idx = pipeline.findIndex(p=>p.company_number===id);
+  if(idx>-1){ pipeline.splice(idx,1); }
+  else{ pipeline.push({company_number:id, name, date_of_creation:date||new Date().toISOString().slice(0,10), address, type:broker?'broker':'lender', status:'identified', added:new Date().toISOString()}); }
+  savePipeline(); updatePipelineStat();
+  const btn = document.getElementById(`pipe-btn-${id}`);
+  if(btn){ const inP=pipeline.some(p=>p.company_number===id); btn.textContent=inP?'✓ In Pipeline':'+ Pipeline'; btn.className=`btn ${inP?'btn-ghost':''}`; btn.style.cssText='font-size:11px;padding:6px 12px'; }
+}
 
 // ── Directors ─────────────────────────────────────────────────────────────────
 async function openDirectorsModal(companyNumber, companyName){
@@ -565,6 +840,7 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function copyText(id,btn){ navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent=o,2000); }); }
 
 updatePipelineStat();
+document.getElementById('import-count').textContent = importedLeads.length;
 </script>
 </body>
 </html>
