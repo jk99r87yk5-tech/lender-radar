@@ -172,7 +172,10 @@
     </div>
     <div class="section-header">
       <div class="section-title" id="results-label">Results</div>
-      <div style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">Newest first</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">Newest first</span>
+        <button class="btn btn-ghost" id="export-btn" style="font-size:11px;padding:5px 12px;display:none" onclick="exportSearchCSV()">⬇ Export CSV</button>
+      </div>
     </div>
     <div class="results-container" id="results-container">
       <div class="empty-state">
@@ -218,6 +221,7 @@
       <div class="section-title">Outreach Pipeline (<span id="pipe-count">0</span>)</div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-purple" style="font-size:12px;padding:7px 14px" onclick="openConnectModal()">⚡ Connect Broker → Lender</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="exportPipelineCSV()">⬇ Export CSV</button>
         <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="clearPipeline()">Clear All</button>
       </div>
     </div>
@@ -316,6 +320,7 @@ let pipeline = JSON.parse(localStorage.getItem('nlr-v3') || '[]');
 let selectedBroker = null, selectedLender = null;
 let currentEmailDraft = '', currentLinkedInDraft = '', currentCompanyName = '';
 let activeTab = 'email';
+let lastSearchResults = [];
 
 // ── SIC dropdown ──────────────────────────────────────────────────────────────
 function updateSicOptions(){
@@ -510,6 +515,8 @@ function renderImported(){
     const pipeId = lead.number||lead.id;
     const liCoUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(lead.name)}`;
     const googleUrl = lead.domain ? lead.domain : `https://www.google.com/search?q=${encodeURIComponent(lead.name)}`;
+    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(lead.name+' '+(lead.address||''))}`;
+    const yellUrl = `https://www.yell.com/s/${encodeURIComponent((lead.name||'').toLowerCase().replace(/\s+/g,'-'))}/`;
     const signupUrl = lead.domain
       ? `https://www.google.com/search?q=site:${encodeURIComponent(lead.domain.replace(/https?:\/\//,''))} "sign up" OR register OR "get started"`
       : `https://www.google.com/search?q=${encodeURIComponent(lead.name+' "sign up" OR register OR "contact us"')}`;
@@ -549,6 +556,8 @@ function renderImported(){
         ${dirBtn}
         <div class="outreach-divider"></div>
         <a href="${googleUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Website 🌐</a>
+        <a href="${mapsUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Maps 📍</a>
+        <a href="${yellUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Yell ↗</a>
         <a href="${signupUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Sign-up 📋</a>
         ${emailBtn}
         <div class="outreach-divider"></div>
@@ -659,6 +668,8 @@ async function runSearch(){
     document.getElementById('stat-warm').textContent=warm;
     document.getElementById('stat-time').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('results-label').textContent=`Results — ${filtered.length} found`;
+    lastSearchResults = filtered;
+    document.getElementById('export-btn').style.display = filtered.length ? 'inline-block' : 'none';
     renderResults(filtered);
   } catch(err){
     container.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red)">${err.message}<br><br><span style="color:var(--text-muted);font-size:12px">If this keeps failing, try a different browser or check your internet connection.</span></div></div>`;
@@ -687,6 +698,8 @@ function renderResults(companies){
     const cardClass=broker?'broker-card':(isHot?'hot':isWarm?'warm':'');
     const liCoUrl=`https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(name)}`;
     const googleUrl=`https://www.google.com/search?q=${encodeURIComponent(name)}`;
+    const mapsUrl=`https://www.google.com/maps/search/${encodeURIComponent(name+' '+addr)}`;
+    const yellUrl=`https://www.yell.com/s/${encodeURIComponent(name.toLowerCase().replace(/\s+/g,'-'))}/`;
     const signupUrl=`https://www.google.com/search?q=${encodeURIComponent(name)} "sign up" OR "register" OR "get started" OR "contact us"`;
     return `<div class="result-card ${cardClass}">
       <div class="result-top">
@@ -714,6 +727,8 @@ function renderResults(companies){
         <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openDirectorsModal('${c.company_number}','${esc(name)}')">Directors 👤</button>
         <div class="outreach-divider"></div>
         <a href="${googleUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Website 🌐</a>
+        <a href="${mapsUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Maps 📍</a>
+        <a href="${yellUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Yell ↗</a>
         <a href="${signupUrl}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">Sign-up 📋</a>
         <div class="outreach-divider"></div>
         <button class="btn ${inP?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="pipe-btn-${c.company_number}"
@@ -838,6 +853,67 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
   document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)closeModal(id); });
 });
 function copyText(id,btn){ navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent=o,2000); }); }
+
+// ── CSV Export ────────────────────────────────────────────────────────────────
+function csvRow(cells){
+  return cells.map(c=>{
+    const s = String(c==null?'':c);
+    return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',');
+}
+
+function downloadCSV(filename, rows){
+  const blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportSearchCSV(){
+  if(!lastSearchResults.length){ alert('Run a search first.'); return; }
+  const headers = csvRow(['Company Name','Company Number','Type','SIC Codes','Incorporated','Days Old','Address','Postcode','Status','CH Link','FCA Search','LinkedIn Search','Google Maps','Yell']);
+  const rows = lastSearchResults.map(c=>{
+    const addr = c.registered_office_address||{};
+    const locality = [addr.address_line_1, addr.locality].filter(Boolean).join(', ');
+    const postcode = addr.postal_code||'';
+    const sics = (c.sic_codes||[]).join('; ');
+    const type = isBroker(c.sic_codes||[]) ? 'Broker' : 'Lender';
+    const age = daysSince(c.date_of_creation);
+    return csvRow([
+      c.title,
+      c.company_number,
+      type,
+      sics,
+      c.date_of_creation,
+      age,
+      locality,
+      postcode,
+      c.company_status,
+      `https://find-and-update.company-information.service.gov.uk/company/${c.company_number}`,
+      `https://register.fca.org.uk/s/search?predefined=ALL&q=${encodeURIComponent(c.title)}`,
+      `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(c.title)}`,
+      `https://www.google.com/maps/search/${encodeURIComponent(c.title+' '+postcode)}`,
+      `https://www.yell.com/s/${encodeURIComponent((c.title||'').toLowerCase().replace(/\s+/g,'-'))}/`
+    ]);
+  });
+  const date = new Date().toISOString().slice(0,10);
+  downloadCSV(`lender-radar-search-${date}.csv`, [headers, ...rows]);
+}
+
+function exportPipelineCSV(){
+  if(!pipeline.length){ alert('Pipeline is empty.'); return; }
+  const headers = csvRow(['Company Name','Company Number','Type','Incorporated','Days Old','Address','Status','Added','LinkedIn','Google Maps','Yell']);
+  const rows = pipeline.map(p=>csvRow([
+    p.name, p.company_number, p.type, p.date_of_creation,
+    daysSince(p.date_of_creation), p.address||'', p.status, p.added?.slice(0,10)||'',
+    `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(p.name)}`,
+    `https://www.google.com/maps/search/${encodeURIComponent(p.name+' '+(p.address||''))}`,
+    `https://www.yell.com/s/${encodeURIComponent((p.name||'').toLowerCase().replace(/\s+/g,'-'))}/`
+  ]));
+  downloadCSV(`lender-radar-pipeline-${new Date().toISOString().slice(0,10)}.csv`, [headers, ...rows]);
+}
 
 updatePipelineStat();
 document.getElementById('import-count').textContent = importedLeads.length;
