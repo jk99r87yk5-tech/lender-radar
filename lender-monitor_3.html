@@ -110,6 +110,22 @@
   .mapper-label{font-size:11px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;}
   .import-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .import-stat{font-size:11px;font-family:var(--mono);color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:5px;}
+  .contact-result{margin-top:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-size:12px;display:none;}
+  .contact-result.visible{display:block;}
+  .contact-result.loading{color:var(--text-muted);}
+  .contact-result.found{border-color:var(--green);background:var(--green-dim);}
+  .contact-result.not-found{border-color:var(--border);color:var(--text-muted);}
+  .contact-result.error{border-color:var(--amber);background:var(--amber-dim);color:var(--amber);}
+  .contact-phones{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .phone-chip{background:var(--surface);border:1px solid var(--border);padding:3px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--text);}
+  .phone-chip:hover{border-color:var(--green);color:var(--green);}
+  .settings-btn{background:none;border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:7px;cursor:pointer;font-size:12px;transition:all .2s;}
+  .settings-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .settings-field{margin-bottom:12px;}
+  .settings-field label{display:block;font-size:11px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .settings-note{font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);}
+  .settings-note a{color:var(--accent);}
+  .google-active{color:var(--green);font-size:10px;font-family:var(--mono);}
   @media(max-width:800px){.controls{grid-template-columns:1fr 1fr;}.stats-row{grid-template-columns:1fr 1fr;}.result-detail{grid-template-columns:1fr 1fr;}.connect-grid{grid-template-columns:1fr;}.mapper-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -122,8 +138,39 @@
       <div class="logo-sub">FCA · Companies House · Pipeline</div>
     </div>
   </div>
-  <div class="status-pill"><div class="pulse"></div>LIVE</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="google-active-badge" class="google-active" style="display:none">● Google API active</span>
+    <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
+    <div class="status-pill"><div class="pulse"></div>LIVE</div>
+  </div>
 </header>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">⚙ Settings</div>
+    <div class="modal-sub">Google Custom Search API — enables phone number lookup on all companies</div>
+    <div class="settings-note">
+      <strong style="color:var(--text)">Free setup (5 min):</strong><br>
+      1. Go to <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → create a project → search "Custom Search JSON API" → Enable it → Credentials → Create API Key<br>
+      2. Go to <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank">programmablesearchengine.google.com</a> → create a search engine → set to "Search the entire web" → copy the Search Engine ID<br>
+      Free tier: <strong style="color:var(--text)">100 searches/day</strong>
+    </div>
+    <div class="settings-field">
+      <label>Google API Key</label>
+      <input type="password" id="settings-api-key" placeholder="AIza...">
+    </div>
+    <div class="settings-field">
+      <label>Search Engine ID (cx)</label>
+      <input type="text" id="settings-cx" placeholder="e.g. 017576662512468239146:omuauf...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="clearGoogleSettings()">Clear</button>
+      <button class="btn btn-ghost" onclick="closeModal('settings-modal')">Cancel</button>
+      <button class="btn" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
 <main>
   <div class="notice">
     <strong>How this works:</strong> Searches Companies House for recently incorporated lenders and brokers. <strong>HOT</strong> = under 30 days old. Click <strong>Directors 👤</strong> to fetch key people and link to LinkedIn. Use <strong>Draft Outreach</strong> for email or LinkedIn message templates. <strong>Connect</strong> in pipeline generates a three-way broker→lender intro.
@@ -569,7 +616,12 @@ function renderImported(){
                 onclick="openOutreach('${esc(lead.name)}','${esc(lead.address||'')}','${lead.date||new Date().toISOString().slice(0,10)}',${lead.type==='broker'})">
           Draft Outreach
         </button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px;color:var(--green);border-color:var(--green)"
+                onclick="findContact('imp-${lead.id}','${esc(lead.name)}','${lead.domain||''}')">
+          ☎ Find Number
+        </button>
       </div>
+      <div class="contact-result" id="contact-imp-${lead.id}"></div>
     </div>`;
   }).join('');
 }
@@ -739,7 +791,12 @@ function renderResults(companies){
                 onclick="openOutreach('${esc(name)}','${esc(addr)}','${c.date_of_creation}',${broker})">
           Draft Outreach
         </button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px;color:var(--green);border-color:var(--green)"
+                onclick="findContact('ch-${c.company_number}','${esc(name)}','')">
+          ☎ Find Number
+        </button>
       </div>
+      <div class="contact-result" id="contact-ch-${c.company_number}"></div>
     </div>`;
   }).join('');
 }
@@ -849,10 +906,164 @@ function generateIntro(){
 
 // ── Modals ────────────────────────────────────────────────────────────────────
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-['outreach-modal','connect-modal','intro-modal','directors-modal'].forEach(id=>{
+['outreach-modal','connect-modal','intro-modal','directors-modal','settings-modal','mapper-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)closeModal(id); });
 });
 function copyText(id,btn){ navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent=o,2000); }); }
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings(){
+  document.getElementById('settings-api-key').value = localStorage.getItem('nlr-google-key')||'';
+  document.getElementById('settings-cx').value = localStorage.getItem('nlr-google-cx')||'';
+  document.getElementById('settings-modal').classList.add('open');
+}
+function saveSettings(){
+  const key = document.getElementById('settings-api-key').value.trim();
+  const cx  = document.getElementById('settings-cx').value.trim();
+  if(key) localStorage.setItem('nlr-google-key', key); else localStorage.removeItem('nlr-google-key');
+  if(cx)  localStorage.setItem('nlr-google-cx',  cx);  else localStorage.removeItem('nlr-google-cx');
+  updateGoogleBadge();
+  closeModal('settings-modal');
+}
+function clearGoogleSettings(){
+  localStorage.removeItem('nlr-google-key'); localStorage.removeItem('nlr-google-cx');
+  document.getElementById('settings-api-key').value='';
+  document.getElementById('settings-cx').value='';
+  updateGoogleBadge();
+}
+function updateGoogleBadge(){
+  const active = !!(localStorage.getItem('nlr-google-key') && localStorage.getItem('nlr-google-cx'));
+  document.getElementById('google-active-badge').style.display = active ? 'inline' : 'none';
+}
+
+// ── Contact Lookup ────────────────────────────────────────────────────────────
+let contactCache = JSON.parse(localStorage.getItem('nlr-contacts')||'{}');
+
+function extractPhones(text){
+  const clean = text.replace(/<[^>]*>/g,' ').replace(/&[a-z#0-9]+;/gi,' ');
+  // UK landlines (01xxx, 02xxx), mobiles (07xxx), freephone (0800), international (+44)
+  const re = /(\+44[\s.\-]?|0)(2\d|1\d{2,3}|7\d{3}|800|808)[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}/g;
+  const found = new Set();
+  let m;
+  while((m=re.exec(clean))!==null){
+    const raw = m[0].replace(/[\s.\-]/g,'');
+    if(raw.length>=10 && raw.length<=13) found.add(m[0].trim().replace(/\s+/g,' '));
+  }
+  return [...found].slice(0,6);
+}
+
+function extractEmails(text){
+  const clean = text.replace(/<[^>]*>/g,' ');
+  const re = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  const found = new Set((clean.match(re)||[]).filter(e=>!e.includes('example')&&!e.includes('domain')));
+  return [...found].slice(0,4);
+}
+
+async function tryFetchContact(domain){
+  const base = domain.replace(/\/$/,'');
+  const paths = ['/contact-us','/contact','/about-us','/about',''];
+  for(const path of paths){
+    try{
+      const url = base+path;
+      const controller = new AbortController();
+      const t = setTimeout(()=>controller.abort(),6000);
+      const res = await fetch(PROXY+encodeURIComponent(url),{signal:controller.signal});
+      clearTimeout(t);
+      if(!res.ok) continue;
+      const html = await res.text();
+      const phones = extractPhones(html);
+      const emails = extractEmails(html);
+      if(phones.length||emails.length) return {phones,emails,source:'website'};
+    }catch(e){ continue; }
+  }
+  return {phones:[],emails:[],source:null};
+}
+
+async function tryGoogleSearch(name){
+  const key = localStorage.getItem('nlr-google-key');
+  const cx  = localStorage.getItem('nlr-google-cx');
+  if(!key||!cx) return {phones:[],emails:[],source:null};
+  try{
+    const q = `"${name}" contact phone`;
+    const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(q)}&num=5`;
+    const res = await fetch(url);
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err?.error?.message||`Google API ${res.status}`);
+    }
+    const data = await res.json();
+    const text = (data.items||[]).map(i=>(i.snippet||'')+' '+(i.htmlSnippet||'')).join(' ');
+    const phones = extractPhones(text);
+    const emails = extractEmails(text);
+    // Also grab the first result's URL as a potential website
+    const website = (data.items||[])[0]?.link||'';
+    return {phones,emails,website,source:'google'};
+  }catch(e){
+    return {phones:[],emails:[],source:'error',error:e.message};
+  }
+}
+
+async function findContact(cardId, name, domain){
+  const el = document.getElementById('contact-'+cardId);
+  if(!el) return;
+
+  // Return cached result if we have one
+  if(contactCache[cardId]){
+    renderContactResult(el, contactCache[cardId]);
+    return;
+  }
+
+  el.className='contact-result visible loading';
+  el.innerHTML='<span style="font-family:var(--mono)">🔍 Searching...</span>';
+
+  let phones=[], emails=[], sources=[], website='', error='';
+
+  // Run both in parallel
+  const [domainResult, googleResult] = await Promise.all([
+    domain ? tryFetchContact(domain) : Promise.resolve({phones:[],emails:[],source:null}),
+    tryGoogleSearch(name)
+  ]);
+
+  if(domainResult.source) sources.push('website');
+  if(googleResult.source==='google') sources.push('Google');
+  if(googleResult.source==='error') error = googleResult.error||'';
+  if(googleResult.website && !domain) website = googleResult.website;
+
+  // Merge, deduplicate
+  phones = [...new Set([...domainResult.phones,...googleResult.phones])].slice(0,6);
+  emails = [...new Set([...domainResult.emails,...googleResult.emails])].slice(0,4);
+
+  const result = {phones,emails,sources,website,error,ts:Date.now()};
+  contactCache[cardId] = result;
+  try{ localStorage.setItem('nlr-contacts',JSON.stringify(contactCache)); }catch(e){}
+
+  renderContactResult(el, result);
+}
+
+function renderContactResult(el, r){
+  const hasData = r.phones.length||r.emails.length;
+  if(hasData){
+    el.className='contact-result visible found';
+    const sourceLabel = r.sources.length ? `<span style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">via ${r.sources.join(' + ')}</span>` : '';
+    const phonesHtml = r.phones.length
+      ? `<div style="margin-top:6px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-bottom:4px">PHONE</div><div class="contact-phones">${r.phones.map(p=>`<span class="phone-chip" onclick="navigator.clipboard.writeText('${p}');this.textContent='Copied ✓';setTimeout(()=>this.textContent='${p}',1500)">${p}</span>`).join('')}</div></div>`
+      : '';
+    const emailsHtml = r.emails.length
+      ? `<div style="margin-top:6px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-bottom:4px">EMAIL</div><div class="contact-phones">${r.emails.map(e=>`<a href="mailto:${e}" class="phone-chip" style="text-decoration:none;color:var(--accent)">${e}</a>`).join('')}</div></div>`
+      : '';
+    const websiteHtml = r.website
+      ? `<div style="margin-top:6px;font-size:11px"><a href="${r.website}" target="_blank" style="color:var(--accent)">${r.website}</a></div>`
+      : '';
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:500;color:var(--green)">✓ Contact info found</span>${sourceLabel}</div>${phonesHtml}${emailsHtml}${websiteHtml}`;
+  } else {
+    el.className='contact-result visible not-found';
+    const hint = !localStorage.getItem('nlr-google-key')
+      ? ' · <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Add Google API key</a> for better results'
+      : '';
+    const errMsg = r.error ? `<span style="color:var(--amber)"> (${r.error})</span>` : '';
+    el.innerHTML=`<span style="font-family:var(--mono)">No contact info found${errMsg}${hint}</span>`;
+  }
+}
 
 // ── CSV Export ────────────────────────────────────────────────────────────────
 function csvRow(cells){
@@ -916,6 +1127,7 @@ function exportPipelineCSV(){
 }
 
 updatePipelineStat();
+updateGoogleBadge();
 document.getElementById('import-count').textContent = importedLeads.length;
 </script>
 </body>
