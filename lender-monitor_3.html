@@ -126,6 +126,12 @@
   .settings-note{font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);}
   .settings-note a{color:var(--accent);}
   .google-active{color:var(--green);font-size:10px;font-family:var(--mono);}
+  .score-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;}
+  .score-row label{font-size:11px;color:var(--text-dim);}
+  .score-row input[type=number]{width:56px;text-align:center;padding:5px 4px;}
+  .link-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;}
+  .link-row-label{font-size:12px;color:var(--text-dim);}
+  .link-row-cost{font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-left:6px;}
   @media(max-width:800px){.controls{grid-template-columns:1fr 1fr;}.stats-row{grid-template-columns:1fr 1fr;}.result-detail{grid-template-columns:1fr 1fr;}.connect-grid{grid-template-columns:1fr;}.mapper-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -164,6 +170,15 @@
       <label>Search Engine ID (cx)</label>
       <input type="text" id="settings-cx" placeholder="e.g. 017576662512468239146:omuauf...">
     </div>
+    <div class="settings-note" style="margin-top:16px">
+      <strong style="color:var(--text)">Backup &amp; Restore</strong><br>
+      Everything (pipeline, imported leads, equity watchlist, scores, theses, contacts) lives in this browser's storage. Export a JSON backup regularly — a cache clear wipes it all.
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="exportBackup()">⬇ Export backup</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="document.getElementById('backup-file-input').click()">⬆ Import backup</button>
+        <input type="file" id="backup-file-input" accept=".json,application/json" style="display:none" onchange="importBackup(event)">
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="clearGoogleSettings()">Clear</button>
       <button class="btn btn-ghost" onclick="closeModal('settings-modal')">Cancel</button>
@@ -179,6 +194,8 @@
     <button class="tab active" onclick="switchTab('search',this)">Prospect Search</button>
     <button class="tab" onclick="switchTab('import',this)">Import CSV</button>
     <button class="tab" onclick="switchTab('pipeline',this)">My Pipeline</button>
+    <button class="tab" onclick="switchTab('equity',this)">Equity Research</button>
+    <button class="tab" onclick="switchTab('watchlist',this)">Equity Watchlist</button>
   </div>
 
   <div id="search-tab">
@@ -276,6 +293,47 @@
       <div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No companies added yet.<br>Search for prospects and click "+ Pipeline".</div></div>
     </div>
   </div>
+
+  <!-- Equity Research tab -->
+  <div id="equity-tab" style="display:none">
+    <div class="notice">
+      <strong>How this works:</strong> Companies House lookup gives structured data — directors, PSCs, charges, filing history — free, for any UK company. <strong>Accounts 📑</strong> fetches the latest filed accounts as iXBRL (machine-tagged) and auto-extracts the balance sheet: net assets, fixed assets, current assets, cash, debtors, stock — then computes NCAV and the 66% Graham threshold. <strong>Filings 📄</strong> now has category filters (accounts / conf statements / officers / capital / charges) with one-click PDF for every filing. Confirmation statements are scanned PDFs with no structured data, so those open as PDF; shareholder control is better read from the PSC register anyway.
+    </div>
+    <div class="controls" style="grid-template-columns:2fr 1fr auto">
+      <div class="control-group">
+        <label>Company Name</label>
+        <input type="text" id="equity-search-term" placeholder="e.g. Vistry Group, Solitron Devices..." onkeydown="if(event.key==='Enter')runEquitySearch()"/>
+      </div>
+      <div class="control-group">
+        <label>Ticker (optional, for quick links)</label>
+        <input type="text" id="equity-ticker" placeholder="e.g. VTY.L"/>
+      </div>
+      <button class="btn" id="equity-search-btn" onclick="runEquitySearch()">Search Companies House</button>
+    </div>
+    <div class="section-header">
+      <div class="section-title" id="equity-results-label">Results</div>
+    </div>
+    <div class="results-container" id="equity-results-container">
+      <div class="empty-state">
+        <div class="empty-icon">📈</div>
+        <div class="empty-text">Enter a company name and search.<br>Works for any UK-incorporated company, listed or private.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equity Watchlist tab -->
+  <div id="watchlist-tab" style="display:none">
+    <div class="section-header">
+      <div class="section-title">Equity Watchlist (<span id="watchlist-count">0</span>)</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="exportWatchlistCSV()">⬇ Export CSV</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:7px 14px" onclick="clearWatchlist()">Clear All</button>
+      </div>
+    </div>
+    <div id="watchlist-container">
+      <div class="empty-state"><div class="empty-icon">👁</div><div class="empty-text">No companies added yet.<br>Search in Equity Research and click "+ Watchlist".</div></div>
+    </div>
+  </div>
 </main>
 
 <!-- Outreach Modal (Email + LinkedIn tabs) -->
@@ -350,6 +408,112 @@
   </div>
 </div>
 
+<!-- PSC Modal -->
+<div class="modal-overlay" id="psc-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="psc-modal-title">Persons with Significant Control</div>
+    <div class="modal-sub" id="psc-modal-sub">Who actually controls &gt;25% of voting rights — Companies House</div>
+    <div id="psc-list" style="margin-top:4px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeModal('psc-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Charges Modal -->
+<div class="modal-overlay" id="charges-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="charges-modal-title">Registered Charges</div>
+    <div class="modal-sub" id="charges-modal-sub">Mortgages / debentures — what has a prior claim ahead of equity</div>
+    <div id="charges-list" style="margin-top:4px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeModal('charges-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Filing History Modal -->
+<div class="modal-overlay" id="filings-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-title" id="filings-modal-title">Filing History</div>
+    <div class="modal-sub" id="filings-modal-sub">Most recent filings — Companies House</div>
+    <div class="msg-tabs" id="filings-filter-row" style="margin-bottom:10px">
+      <button class="msg-tab active" onclick="filterFilings('',this)">All</button>
+      <button class="msg-tab" onclick="filterFilings('accounts',this)">Accounts</button>
+      <button class="msg-tab" onclick="filterFilings('confirmation-statement',this)">Conf. Stmts</button>
+      <button class="msg-tab" onclick="filterFilings('officers',this)">Officers</button>
+      <button class="msg-tab" onclick="filterFilings('capital',this)">Capital</button>
+      <button class="msg-tab" onclick="filterFilings('mortgage',this)">Charges</button>
+    </div>
+    <div id="filings-list" style="margin-top:4px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeModal('filings-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Accounts Parser Modal -->
+<div class="modal-overlay" id="accounts-modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-title" id="accounts-modal-title">Accounts Parser</div>
+    <div class="modal-sub" id="accounts-modal-sub">Latest filed accounts, parsed from iXBRL — Companies House</div>
+    <div id="accounts-body" style="margin-top:4px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeModal('accounts-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Thesis Journal Modal -->
+<div class="modal-overlay" id="thesis-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title" id="thesis-modal-title">Thesis Journal</div>
+    <div class="modal-sub" id="thesis-modal-sub">The reasoning layer — this is what you review in 6 months to audit your own judgement</div>
+    <div class="settings-field"><label>What must be true for this to work</label><textarea id="thesis-must" style="min-height:70px" placeholder="e.g. NCAV holds above £X, management continues buybacks, no further dilution..."></textarea></div>
+    <div class="settings-field"><label>Key risk (the one that kills it)</label><textarea id="thesis-risk" style="min-height:60px" placeholder="e.g. cash burn accelerates, related-party leakage, delisting..."></textarea></div>
+    <div class="settings-field"><label>Catalyst (why does the discount close?)</label><textarea id="thesis-catalyst" style="min-height:60px" placeholder="e.g. activist stake, strategic review, buyback programme, sale process..."></textarea></div>
+    <div class="settings-field"><label>Kill criteria (exit triggers, decided now — not in the moment)</label><textarea id="thesis-kill" style="min-height:60px" placeholder="e.g. NCAV falls below market cap, director starts selling, accounts overdue..."></textarea></div>
+    <div id="thesis-dates" style="font-size:10px;font-family:var(--mono);color:var(--text-muted)"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('thesis-modal')">Cancel</button>
+      <button class="btn" onclick="saveThesis()">Save Thesis</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Links Modal -->
+<div class="modal-overlay" id="links-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="links-modal-title">Quick Links</div>
+    <div class="modal-sub">Deep-links into every source on the Data Sources checklist</div>
+    <div id="links-list" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn btn-ghost" onclick="closeModal('links-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CCCPARTS Score Modal -->
+<div class="modal-overlay" id="score-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="score-modal-title">CCCPARTS Score</div>
+    <div class="modal-sub">1 (very weak) – 5 (very strong) · weighted the same as the CCCPARTS Scorecard spreadsheet</div>
+    <div id="score-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+    <div class="settings-field">
+      <label>Notes</label>
+      <textarea id="score-notes" style="min-height:80px" placeholder="Key findings, red flags, catalyst..."></textarea>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:6px">
+      <span style="font-size:12px;color:var(--text-muted);font-family:var(--mono)">OVERALL SCORE</span>
+      <span id="score-overall-preview" style="font-size:20px;font-weight:600">—</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('score-modal')">Cancel</button>
+      <button class="btn" onclick="saveScore()">Save to Watchlist</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Config ───────────────────────────────────────────────────────────────────
 const CH_API_KEY = '035150a0-a960-4557-b368-3da8dc590c64';
@@ -381,12 +545,16 @@ updateSicOptions();
 function switchTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('search-tab').style.display   = tab==='search'   ? 'block':'none';
-  document.getElementById('import-tab').style.display   = tab==='import'   ? 'block':'none';
-  document.getElementById('pipeline-tab').style.display = tab==='pipeline' ? 'block':'none';
+  document.getElementById('search-tab').style.display     = tab==='search'    ? 'block':'none';
+  document.getElementById('import-tab').style.display     = tab==='import'    ? 'block':'none';
+  document.getElementById('pipeline-tab').style.display   = tab==='pipeline'  ? 'block':'none';
+  document.getElementById('equity-tab').style.display     = tab==='equity'    ? 'block':'none';
+  document.getElementById('watchlist-tab').style.display  = tab==='watchlist' ? 'block':'none';
   if(tab==='pipeline') renderPipeline();
   if(tab==='import') renderImported();
+  if(tab==='watchlist') renderWatchlist();
   updatePipelineStat();
+  updateWatchlistStat();
 }
 
 function switchMsgTab(tab){
@@ -650,7 +818,7 @@ async function openDirectorsModal(companyNumber, companyName){
       document.getElementById('directors-list').innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No active directors listed on Companies House yet.</div>';
       return;
     }
-    document.getElementById('directors-list').innerHTML = officers.map(o=>{
+    document.getElementById('directors-list').innerHTML = officers.map((o,i)=>{
       // CH stores names as SURNAME, Firstname — reverse for naturalness
       const parts = o.name.split(',');
       const name = parts.length>1 ? (parts[1].trim()+' '+parts[0].trim()) : o.name;
@@ -658,15 +826,23 @@ async function openDirectorsModal(companyNumber, companyName){
       const apptDate = o.appointed_on ? new Date(o.appointed_on).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : '';
       const liUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(name+' '+companyName)}`;
       const googleLiUrl = `https://www.google.com/search?q=${encodeURIComponent('site:linkedin.com/in "'+name+'"')}`;
-      return `<div class="director-row">
-        <div>
-          <div class="director-name">${name}</div>
-          <div class="director-role">${role}${apptDate?' · Appointed '+apptDate:''}</div>
+      const apptLink = o.links && o.links.officer && o.links.officer.appointments ? o.links.officer.appointments : '';
+      const traceBtn = apptLink
+        ? `<button class="btn btn-purple" style="font-size:10px;padding:4px 10px" onclick="traceOfficer('${apptLink}','trace-${i}','${esc(name)}')">Trace 🔍</button>`
+        : '';
+      return `<div style="border-bottom:1px solid var(--border)">
+        <div class="director-row" style="border-bottom:none">
+          <div>
+            <div class="director-name">${name}</div>
+            <div class="director-role">${role}${apptDate?' · Appointed '+apptDate:''}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
+            ${traceBtn}
+            <a href="${liUrl}" target="_blank" class="btn btn-cyan" style="font-size:10px;padding:4px 10px;text-decoration:none;display:inline-block">LI ↗</a>
+            <a href="${googleLiUrl}" target="_blank" class="btn btn-ghost" style="font-size:10px;padding:4px 10px;text-decoration:none;display:inline-block">Google ↗</a>
+          </div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
-          <a href="${liUrl}" target="_blank" class="btn btn-cyan" style="font-size:10px;padding:4px 10px;text-decoration:none;display:inline-block">LI Search ↗</a>
-          <a href="${googleLiUrl}" target="_blank" class="btn btn-ghost" style="font-size:10px;padding:4px 10px;text-decoration:none;display:inline-block">Google ↗</a>
-        </div>
+        <div id="trace-${i}" style="display:none;padding:0 0 12px 0"></div>
       </div>`;
     }).join('');
   } catch(e){
@@ -906,7 +1082,7 @@ function generateIntro(){
 
 // ── Modals ────────────────────────────────────────────────────────────────────
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-['outreach-modal','connect-modal','intro-modal','directors-modal','settings-modal','mapper-modal'].forEach(id=>{
+['outreach-modal','connect-modal','intro-modal','directors-modal','settings-modal','mapper-modal','psc-modal','charges-modal','filings-modal','links-modal','score-modal','accounts-modal','thesis-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){ if(e.target===this)closeModal(id); });
 });
 function copyText(id,btn){ navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{ const o=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent=o,2000); }); }
@@ -941,7 +1117,6 @@ let contactCache = JSON.parse(localStorage.getItem('nlr-contacts')||'{}');
 
 function extractPhones(text){
   const clean = text.replace(/<[^>]*>/g,' ').replace(/&[a-z#0-9]+;/gi,' ');
-  // UK landlines (01xxx, 02xxx), mobiles (07xxx), freephone (0800), international (+44)
   const re = /(\+44[\s.\-]?|0)(2\d|1\d{2,3}|7\d{3}|800|808)[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}/g;
   const found = new Set();
   let m;
@@ -955,113 +1130,224 @@ function extractPhones(text){
 function extractEmails(text){
   const clean = text.replace(/<[^>]*>/g,' ');
   const re = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-  const found = new Set((clean.match(re)||[]).filter(e=>!e.includes('example')&&!e.includes('domain')));
+  const found = new Set((clean.match(re)||[]).filter(e=>!e.includes('example')&&!e.includes('domain')&&!e.includes('sentry')&&!e.includes('wix')));
   return [...found].slice(0,4);
 }
 
-async function tryFetchContact(domain){
-  const base = domain.replace(/\/$/,'');
+// Fetch via CORS proxy with timeout
+async function proxyFetch(url, timeoutMs=7000){
+  const controller = new AbortController();
+  const t = setTimeout(()=>controller.abort(), timeoutMs);
+  try{
+    const res = await fetch(PROXY+encodeURIComponent(url), {signal:controller.signal});
+    clearTimeout(t);
+    return res;
+  }catch(e){ clearTimeout(t); throw e; }
+}
+
+// Step 1: Find the actual website URL via DuckDuckGo
+async function findWebsiteUrl(name){
+  try{
+    const q = encodeURIComponent(name+' official website UK');
+    const res = await proxyFetch(`https://html.duckduckgo.com/html/?q=${q}`, 9000);
+    if(!res.ok) return null;
+    const html = await res.text();
+    // DuckDuckGo wraps result URLs in uddg= param
+    const re = /uddg=([^&"'\s]+)/g;
+    let m;
+    const skipDomains = ['duckduckgo','google','bing','facebook','linkedin','twitter','companies-house','endole','opencorporates','yell','trustpilot','companieshouse'];
+    while((m=re.exec(html))!==null){
+      try{
+        const url = decodeURIComponent(m[1]);
+        if(url.startsWith('http') && !skipDomains.some(d=>url.includes(d))){
+          return url.split('?')[0].replace(/\/$/,'');
+        }
+      }catch(e){}
+    }
+    // Fallback: look for href patterns pointing to external sites
+    const hrefRe = /href="(https?:\/\/(?!.*duckduckgo)[^"]+)"/g;
+    while((m=hrefRe.exec(html))!==null){
+      const url = m[1];
+      if(!skipDomains.some(d=>url.includes(d))) return url.split('?')[0].replace(/\/$/,'');
+    }
+  }catch(e){}
+  return null;
+}
+
+// Step 2: Scrape contact/about pages on the discovered website
+async function scrapeWebsiteContact(websiteUrl){
+  const base = websiteUrl.replace(/\/$/,'');
   const paths = ['/contact-us','/contact','/about-us','/about',''];
   for(const path of paths){
     try{
-      const url = base+path;
-      const controller = new AbortController();
-      const t = setTimeout(()=>controller.abort(),6000);
-      const res = await fetch(PROXY+encodeURIComponent(url),{signal:controller.signal});
-      clearTimeout(t);
+      const res = await proxyFetch(base+path, 7000);
       if(!res.ok) continue;
       const html = await res.text();
       const phones = extractPhones(html);
       const emails = extractEmails(html);
-      if(phones.length||emails.length) return {phones,emails,source:'website'};
+      if(phones.length||emails.length) return {phones, emails};
     }catch(e){ continue; }
   }
-  return {phones:[],emails:[],source:null};
+  return {phones:[], emails:[]};
 }
 
+// Step 3: Google Custom Search API (if key set)
 async function tryGoogleSearch(name){
   const key = localStorage.getItem('nlr-google-key');
   const cx  = localStorage.getItem('nlr-google-cx');
-  if(!key||!cx) return {phones:[],emails:[],source:null};
+  if(!key||!cx) return {phones:[],emails:[],website:null,source:null};
   try{
     const q = `"${name}" contact phone`;
-    const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(q)}&num=5`;
-    const res = await fetch(url);
-    if(!res.ok){
-      const err = await res.json().catch(()=>({}));
-      throw new Error(err?.error?.message||`Google API ${res.status}`);
-    }
+    const res = await fetch(`https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(q)}&num=5`);
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e?.error?.message||`Google API ${res.status}`); }
     const data = await res.json();
     const text = (data.items||[]).map(i=>(i.snippet||'')+' '+(i.htmlSnippet||'')).join(' ');
-    const phones = extractPhones(text);
-    const emails = extractEmails(text);
-    // Also grab the first result's URL as a potential website
-    const website = (data.items||[])[0]?.link||'';
-    return {phones,emails,website,source:'google'};
+    const website = (data.items||[])[0]?.link||null;
+    return {phones:extractPhones(text), emails:extractEmails(text), website, source:'Google'};
   }catch(e){
-    return {phones:[],emails:[],source:'error',error:e.message};
+    return {phones:[],emails:[],website:null,source:'error',error:e.message};
   }
 }
 
-async function findContact(cardId, name, domain){
+async function findContact(cardId, name, knownDomain){
   const el = document.getElementById('contact-'+cardId);
   if(!el) return;
 
-  // Return cached result if we have one
-  if(contactCache[cardId]){
-    renderContactResult(el, contactCache[cardId]);
+  // Show cached result (with manual edit still available)
+  if(contactCache[cardId] && !contactCache[cardId].manual){
+    renderContactResult(el, cardId, contactCache[cardId]);
+    return;
+  }
+  if(contactCache[cardId]?.manual){
+    renderContactResult(el, cardId, contactCache[cardId]);
     return;
   }
 
   el.className='contact-result visible loading';
-  el.innerHTML='<span style="font-family:var(--mono)">🔍 Searching...</span>';
+  el.innerHTML='<div style="font-family:var(--mono);color:var(--text-muted)">🔍 Step 1/3 — Discovering website...</div>';
 
-  let phones=[], emails=[], sources=[], website='', error='';
+  // Step 1: find website if not already known
+  let websiteUrl = knownDomain || null;
+  if(!websiteUrl){
+    el.innerHTML='<div style="font-family:var(--mono);color:var(--text-muted)">🔍 Finding real website via search...</div>';
+    websiteUrl = await findWebsiteUrl(name);
+  }
 
-  // Run both in parallel
-  const [domainResult, googleResult] = await Promise.all([
-    domain ? tryFetchContact(domain) : Promise.resolve({phones:[],emails:[],source:null}),
-    tryGoogleSearch(name)
-  ]);
+  // Step 2: scrape contact page
+  let phones=[], emails=[];
+  if(websiteUrl){
+    el.innerHTML=`<div style="font-family:var(--mono);color:var(--text-muted)">🔍 Found <a href="${websiteUrl}" target="_blank" style="color:var(--accent)">${websiteUrl.replace(/https?:\/\//,'')}</a> — reading contact page...</div>`;
+    const scraped = await scrapeWebsiteContact(websiteUrl);
+    phones = scraped.phones;
+    emails = scraped.emails;
+  }
 
-  if(domainResult.source) sources.push('website');
-  if(googleResult.source==='google') sources.push('Google');
-  if(googleResult.source==='error') error = googleResult.error||'';
-  if(googleResult.website && !domain) website = googleResult.website;
+  // Step 3: Google Custom Search in parallel (if key available)
+  const googleResult = await tryGoogleSearch(name);
+  if(googleResult.source==='Google'){
+    phones = [...new Set([...phones, ...googleResult.phones])].slice(0,6);
+    emails = [...new Set([...emails, ...googleResult.emails])].slice(0,4);
+    if(!websiteUrl && googleResult.website) websiteUrl = googleResult.website;
+  }
 
-  // Merge, deduplicate
-  phones = [...new Set([...domainResult.phones,...googleResult.phones])].slice(0,6);
-  emails = [...new Set([...domainResult.emails,...googleResult.emails])].slice(0,4);
+  const sources = [];
+  if(websiteUrl) sources.push('website');
+  if(googleResult.source==='Google') sources.push('Google');
 
-  const result = {phones,emails,sources,website,error,ts:Date.now()};
+  const result = {
+    phones, emails, sources,
+    website: websiteUrl||'',
+    error: googleResult.source==='error' ? googleResult.error : '',
+    ts: Date.now()
+  };
   contactCache[cardId] = result;
   try{ localStorage.setItem('nlr-contacts',JSON.stringify(contactCache)); }catch(e){}
-
-  renderContactResult(el, result);
+  renderContactResult(el, cardId, result);
 }
 
-function renderContactResult(el, r){
-  const hasData = r.phones.length||r.emails.length;
-  if(hasData){
+function renderContactResult(el, cardId, r){
+  const hasAuto = r.phones.length||r.emails.length||r.website;
+  const manualPhone = r.manualPhone||'';
+  const manualEmail = r.manualEmail||'';
+  const manualSite  = r.manualSite||'';
+  const hasManual   = manualPhone||manualEmail||manualSite;
+
+  let html = '';
+
+  if(hasAuto || hasManual){
     el.className='contact-result visible found';
-    const sourceLabel = r.sources.length ? `<span style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">via ${r.sources.join(' + ')}</span>` : '';
-    const phonesHtml = r.phones.length
-      ? `<div style="margin-top:6px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-bottom:4px">PHONE</div><div class="contact-phones">${r.phones.map(p=>`<span class="phone-chip" onclick="navigator.clipboard.writeText('${p}');this.textContent='Copied ✓';setTimeout(()=>this.textContent='${p}',1500)">${p}</span>`).join('')}</div></div>`
-      : '';
-    const emailsHtml = r.emails.length
-      ? `<div style="margin-top:6px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-bottom:4px">EMAIL</div><div class="contact-phones">${r.emails.map(e=>`<a href="mailto:${e}" class="phone-chip" style="text-decoration:none;color:var(--accent)">${e}</a>`).join('')}</div></div>`
-      : '';
-    const websiteHtml = r.website
-      ? `<div style="margin-top:6px;font-size:11px"><a href="${r.website}" target="_blank" style="color:var(--accent)">${r.website}</a></div>`
-      : '';
-    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:500;color:var(--green)">✓ Contact info found</span>${sourceLabel}</div>${phonesHtml}${emailsHtml}${websiteHtml}`;
+    const sourceLabel = r.sources?.length ? `<span style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">via ${r.sources.join(' + ')}</span>` : '';
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-weight:500;color:var(--green)">✓ Contact info</span>${sourceLabel}</div>`;
+
+    // Website
+    const site = r.website||manualSite;
+    if(site) html += `<div style="margin-bottom:6px;font-size:11px">🌐 <a href="${site.startsWith('http')?site:'https://'+site}" target="_blank" style="color:var(--accent)">${site.replace(/https?:\/\//,'')}</a></div>`;
+
+    // Phones
+    const allPhones = [...new Set([...r.phones, ...(manualPhone?[manualPhone]:[])])];
+    if(allPhones.length){
+      html += `<div style="margin-bottom:4px"><div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-bottom:4px">PHONE</div><div class="contact-phones">`;
+      html += allPhones.map(p=>`<span class="phone-chip" onclick="navigator.clipboard.writeText('${p}');this.textContent='Copied ✓';setTimeout(()=>this.textContent='${p}',1500)">${p}</span>`).join('');
+      html += `</div></div>`;
+    }
+
+    // Emails
+    const allEmails = [...new Set([...r.emails, ...(manualEmail?[manualEmail]:[])])];
+    if(allEmails.length){
+      html += `<div><div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);margin-bottom:4px">EMAIL</div><div class="contact-phones">`;
+      html += allEmails.map(e=>`<a href="mailto:${e}" class="phone-chip" style="text-decoration:none;color:var(--accent)">${e}</a>`).join('');
+      html += `</div></div>`;
+    }
   } else {
     el.className='contact-result visible not-found';
-    const hint = !localStorage.getItem('nlr-google-key')
-      ? ' · <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Add Google API key</a> for better results'
-      : '';
+    const hint = !localStorage.getItem('nlr-google-key') ? ` · <a href="#" onclick="openSettings();return false" style="color:var(--accent)">Add Google API key</a> for better results` : '';
     const errMsg = r.error ? `<span style="color:var(--amber)"> (${r.error})</span>` : '';
-    el.innerHTML=`<span style="font-family:var(--mono)">No contact info found${errMsg}${hint}</span>`;
+    html += `<div style="font-family:var(--mono);margin-bottom:8px">Nothing found automatically${errMsg}${hint}</div>`;
+  }
+
+  // Always show manual entry toggle
+  html += `<div style="margin-top:8px"><a href="#" style="font-size:11px;color:var(--text-muted)" onclick="toggleManualEntry('${cardId}');return false">✏ ${hasManual?'Edit manual entry':'Add manually'}</a></div>`;
+  html += `<div id="manual-${cardId}" style="display:none;margin-top:8px;display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <input id="m-site-${cardId}"  placeholder="Website URL" value="${manualSite}"  style="font-size:12px;padding:6px 8px">
+      <input id="m-phone-${cardId}" placeholder="Phone number" value="${manualPhone}" style="font-size:12px;padding:6px 8px">
+    </div>
+    <div style="display:flex;gap:6px">
+      <input id="m-email-${cardId}" placeholder="Email address" value="${manualEmail}" style="font-size:12px;padding:6px 8px;flex:1">
+      <button class="btn" style="font-size:11px;padding:6px 12px" onclick="saveManualContact('${cardId}')">Save</button>
+      <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="clearManualContact('${cardId}')">Clear</button>
+    </div>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function toggleManualEntry(cardId){
+  const d = document.getElementById('manual-'+cardId);
+  if(d) d.style.display = d.style.display==='none'||!d.style.display ? 'block' : 'none';
+}
+
+function saveManualContact(cardId){
+  const site  = document.getElementById('m-site-'+cardId)?.value.trim()||'';
+  const phone = document.getElementById('m-phone-'+cardId)?.value.trim()||'';
+  const email = document.getElementById('m-email-'+cardId)?.value.trim()||'';
+  const existing = contactCache[cardId]||{phones:[],emails:[],sources:[],website:'',ts:Date.now()};
+  const updated = {...existing, manualSite:site, manualPhone:phone, manualEmail:email, manual:true};
+  contactCache[cardId] = updated;
+  try{ localStorage.setItem('nlr-contacts',JSON.stringify(contactCache)); }catch(e){}
+  const el = document.getElementById('contact-'+cardId);
+  if(el) renderContactResult(el, cardId, updated);
+}
+
+function clearManualContact(cardId){
+  if(contactCache[cardId]){
+    delete contactCache[cardId].manualSite;
+    delete contactCache[cardId].manualPhone;
+    delete contactCache[cardId].manualEmail;
+    delete contactCache[cardId].manual;
+    try{ localStorage.setItem('nlr-contacts',JSON.stringify(contactCache)); }catch(e){}
+    const el = document.getElementById('contact-'+cardId);
+    if(el) renderContactResult(el, cardId, contactCache[cardId]);
   }
 }
 
@@ -1126,9 +1412,797 @@ function exportPipelineCSV(){
   downloadCSV(`lender-radar-pipeline-${new Date().toISOString().slice(0,10)}.csv`, [headers, ...rows]);
 }
 
+// ── Equity Research Config ──────────────────────────────────────────────────
+const CCCPARTS_WEIGHTS = {Character:20,Capacity:15,Capital:10,Purpose:10,Amount:10,Repayment:15,Terms:10,Security:10};
+const CCCPARTS_ORDER = Object.keys(CCCPARTS_WEIGHTS);
+
+let watchlist = JSON.parse(localStorage.getItem('nlr-equity-watchlist')||'[]');
+let lastEquityResults = [];
+let scoreTargetId = null;
+
+function buildQuickLinks(name, ticker){
+  const n = encodeURIComponent(name);
+  const t = ticker ? encodeURIComponent(ticker.replace(/\.L$/i,'')) : '';
+  return [
+    {label:'Investegate / RNS history', cost:'Free', url:`https://www.investegate.co.uk/search?searchtype=1&q=${n}`},
+    {label:'FCA Register', cost:'Free', url:`https://register.fca.org.uk/s/search?predefined=ALL&q=${n}`},
+    {label:'London Stock Exchange', cost:'Free', url:`https://www.londonstockexchange.com/search?q=${n}`},
+    {label:'Annual Report / IR page', cost:'Free', url:`https://www.google.com/search?q=${n}+annual+report+investor+relations`},
+    {label:'AIM admission document', cost:'Free', url:`https://www.google.com/search?q=${n}+admission+document+AIM+filetype:pdf`},
+    {label:'Yahoo Finance', cost:'Free', url: ticker ? `https://finance.yahoo.com/quote/${t}.L` : `https://finance.yahoo.com/lookup?s=${n}`},
+    {label:'Stockopedia', cost:'Paid (free trial)', url:`https://www.google.com/search?q=${n}+site:stockopedia.com`},
+    {label:'SharePad', cost:'Paid (trial)', url:`https://www.google.com/search?q=${n}+site:sharescope.co.uk+OR+site:sharepad.co.uk`},
+    {label:'FRC public register (auditor action)', cost:'Free', url:`https://www.google.com/search?q=${n}+site:frc.org.uk`}
+  ];
+}
+
+function updateWatchlistStat(){ const el=document.getElementById('watchlist-count'); if(el) el.textContent = watchlist.length; }
+function saveWatchlist(){ localStorage.setItem('nlr-equity-watchlist', JSON.stringify(watchlist)); }
+
+// ── Equity Search (Companies House — no lending SIC filter) ─────────────────
+async function runEquitySearch(){
+  const btn = document.getElementById('equity-search-btn');
+  const term = document.getElementById('equity-search-term').value.trim();
+  if(!term){ alert('Enter a company name.'); return; }
+  btn.disabled = true; btn.textContent = 'Searching...';
+  const container = document.getElementById('equity-results-container');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><div style="margin-top:8px">Querying Companies House...</div></div>';
+  try{
+    const data = await chFetch(`/search/companies?q=${encodeURIComponent(term)}&items_per_page=20`);
+    const items = data.items||[];
+    lastEquityResults = items;
+    document.getElementById('equity-results-label').textContent = `Results — ${items.length} found`;
+    renderEquityResults(items);
+  }catch(err){
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text" style="color:var(--red)">${err.message}</div></div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Search Companies House';
+}
+
+function renderEquityResults(companies){
+  const container = document.getElementById('equity-results-container');
+  if(!companies.length){
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔎</div><div class="empty-text">No matches on Companies House. Try a shorter or different name.</div></div>';
+    return;
+  }
+  const ticker = document.getElementById('equity-ticker').value.trim();
+  container.innerHTML = companies.map(c=>{
+    const addr = c.registered_office_address ? [c.registered_office_address.locality, c.registered_office_address.postal_code].filter(Boolean).join(', ') : 'Not listed';
+    const name = c.title;
+    const inWatch = watchlist.some(w=>w.company_number===c.company_number);
+    return `<div class="result-card">
+      <div class="result-top">
+        <div>
+          <div class="company-name">${name}</div>
+          <div class="company-meta"><span>${c.company_number}</span><span>·</span><span>Inc. ${new Date(c.date_of_creation).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span><span>·</span><span>${(c.company_status||'').toUpperCase()}</span></div>
+        </div>
+        <div class="badges">${(c.sic_codes||[]).map(s=>`<span class="badge badge-blue">${s}</span>`).join('')}</div>
+      </div>
+      <div class="result-detail">
+        <div class="detail-item"><label>Address</label><span>${addr}</span></div>
+        <div class="detail-item"><label>Type</label><span>${c.company_type||'—'}</span></div>
+        <div class="detail-item"><label>Status</label><span>${c.company_status||'—'}</span></div>
+      </div>
+      <div class="outreach-btn">
+        <a href="https://find-and-update.company-information.service.gov.uk/company/${c.company_number}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:6px 12px;text-decoration:none;display:inline-block">CH ↗</a>
+        <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openDirectorsModal('${c.company_number}','${esc(name)}')">Officers 👤</button>
+        <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openPscModal('${c.company_number}','${esc(name)}')">PSC 🔍</button>
+        <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openChargesModal('${c.company_number}','${esc(name)}')">Charges 🔒</button>
+        <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openFilingsModal('${c.company_number}','${esc(name)}')">Filings 📄</button>
+        <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="parseLatestAccounts('${c.company_number}','${esc(name)}')">Accounts 📑</button>
+        <div class="outreach-divider"></div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="openLinksModal('${esc(name)}','${esc(ticker)}')">Quick Links 🔗</button>
+        <button class="btn ${inWatch?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="watch-btn-${c.company_number}"
+                onclick="toggleWatchlist('${c.company_number}','${esc(name)}','${esc(ticker)}','${c.date_of_creation}','${esc(addr)}')">
+          ${inWatch?'✓ In Watchlist':'+ Watchlist'}
+        </button>
+        <button class="btn btn-purple" style="font-size:11px;padding:6px 12px" onclick="autoAssess('${c.company_number}','${esc(name)}','${esc(ticker)}','${c.date_of_creation}','${esc(addr)}')">
+          Auto-Assess ⚡
+        </button>
+        <button class="btn btn-purple" style="font-size:11px;padding:6px 12px" onclick="openScoreModal('${c.company_number}','${esc(name)}','${esc(ticker)}','${c.date_of_creation}','${esc(addr)}')">
+          Score CCCPARTS 📊
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── PSC (Persons with Significant Control) ──────────────────────────────────
+async function openPscModal(companyNumber, companyName){
+  document.getElementById('psc-modal-title').textContent = companyName;
+  document.getElementById('psc-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 8px;width:20px;height:20px"></div></div>';
+  document.getElementById('psc-modal').classList.add('open');
+  try{
+    const data = await chFetch(`/company/${companyNumber}/persons-with-significant-control`);
+    const items = (data.items||[]).filter(p=>!p.ceased_on);
+    if(!items.length){
+      document.getElementById('psc-list').innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No active PSCs on record — usually means control sits in a widely-held listed structure, or the register has not yet caught up with filings.</div>';
+      return;
+    }
+    document.getElementById('psc-list').innerHTML = items.map(p=>{
+      const name = p.name || 'Unnamed PSC';
+      const kind = (p.kind||'').replace(/-/g,' ');
+      const natures = (p.natures_of_control||[]).map(n=>n.replace(/-/g,' ')).join(', ');
+      return `<div class="director-row">
+        <div>
+          <div class="director-name">${name}</div>
+          <div class="director-role">${kind}${natures?' · '+natures:''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('psc-list').innerHTML = `<div style="color:var(--red);font-size:13px;padding:12px 0">${e.message}</div>`;
+  }
+}
+
+// ── Charges (mortgages/debentures — Security check) ─────────────────────────
+async function openChargesModal(companyNumber, companyName){
+  document.getElementById('charges-modal-title').textContent = companyName;
+  document.getElementById('charges-list').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 8px;width:20px;height:20px"></div></div>';
+  document.getElementById('charges-modal').classList.add('open');
+  try{
+    const data = await chFetch(`/company/${companyNumber}/charges`);
+    const items = data.items||[];
+    if(!items.length){
+      document.getElementById('charges-list').innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No registered charges — no secured lender sits ahead of equity holders on the Companies House record.</div>';
+      return;
+    }
+    document.getElementById('charges-list').innerHTML = items.map(c=>{
+      const status = c.status||'outstanding';
+      const badgeColor = status==='outstanding' ? 'var(--amber)' : 'var(--text-muted)';
+      const created = c.created_on ? new Date(c.created_on).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
+      const holder = (c.persons_entitled||[]).map(p=>p.name).join(', ') || 'Not listed';
+      return `<div class="director-row">
+        <div>
+          <div class="director-name">${holder}</div>
+          <div class="director-role">${(c.type||'Charge').replace(/-/g,' ')} · Created ${created} · <span style="color:${badgeColor}">${status.toUpperCase()}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('charges-list').innerHTML = `<div style="color:var(--red);font-size:13px;padding:12px 0">${e.message}</div>`;
+  }
+}
+
+// ── Filing History (with category filter + document links) ───────────────────
+let filingsCompanyNumber = null, filingsCompanyName = '';
+
+function docUrl(companyNumber, transactionId, format){
+  return `https://find-and-update.company-information.service.gov.uk/company/${companyNumber}/filing-history/${transactionId}/document?format=${format}&download=0`;
+}
+
+async function openFilingsModal(companyNumber, companyName){
+  filingsCompanyNumber = companyNumber;
+  filingsCompanyName = companyName;
+  document.getElementById('filings-modal-title').textContent = companyName;
+  // reset filter to All
+  document.querySelectorAll('#filings-filter-row .msg-tab').forEach((t,i)=>t.classList.toggle('active', i===0));
+  document.getElementById('filings-modal').classList.add('open');
+  await loadFilings('');
+}
+
+async function filterFilings(category, el){
+  document.querySelectorAll('#filings-filter-row .msg-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  await loadFilings(category);
+}
+
+async function loadFilings(category){
+  const list = document.getElementById('filings-list');
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 8px;width:20px;height:20px"></div></div>';
+  try{
+    const catParam = category ? `&category=${category}` : '';
+    const data = await chFetch(`/company/${filingsCompanyNumber}/filing-history?items_per_page=25${catParam}`);
+    const items = data.items||[];
+    document.getElementById('filings-modal-sub').textContent = `${data.total_count??items.length} filings on record · Companies House`;
+    if(!items.length){
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No filings in this category.</div>';
+      return;
+    }
+    list.innerHTML = items.map(f=>{
+      const date = f.date ? new Date(f.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
+      const desc = f.description ? f.description.replace(/-/g,' ') : (f.type||'Filing');
+      const tid = f.transaction_id;
+      const hasDoc = !!(f.links && f.links.document_metadata) && tid;
+      const isAccounts = f.category==='accounts';
+      const docBtns = hasDoc
+        ? `<a href="${docUrl(filingsCompanyNumber, tid, 'pdf')}" target="_blank" class="btn btn-ghost" style="font-size:10px;padding:4px 10px;text-decoration:none;display:inline-block">PDF ↗</a>` +
+          (isAccounts ? `<button class="btn btn-cyan" style="font-size:10px;padding:4px 10px" onclick="parseAccountsFiling('${tid}','${esc(desc)}')">Parse 📑</button>` : '')
+        : '<span style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">no doc</span>';
+      return `<div class="director-row">
+        <div style="flex:1;min-width:0">
+          <div class="director-name" style="font-weight:400">${desc}</div>
+          <div class="director-role">${date}${f.category?' · '+f.category:''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">${docBtns}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML = `<div style="color:var(--red);font-size:13px;padding:12px 0">${e.message}</div>`;
+  }
+}
+
+// ── Accounts Parser (iXBRL) ───────────────────────────────────────────────────
+// UK accounts filed digitally are iXBRL: XHTML with machine-readable XBRL tags.
+// We fetch format=xhtml from the public document URL and parse the tags in-browser.
+// NCAV identity used: NCAV = Current Assets − Total Liabilities = Net Assets − Fixed (non-current) Assets.
+
+const XBRL_CONCEPTS = {
+  equity:        {labels:['equity','netassetsliabilities'], display:'Net Assets / Equity'},
+  fixedAssets:   {labels:['fixedassets','totalnoncurrentassets','noncurrentassets'], display:'Fixed / Non-current Assets'},
+  currentAssets: {labels:['currentassets','totalcurrentassets'], display:'Current Assets'},
+  cash:          {labels:['cashbankonhand','cashbankinhand','cashcashequivalents'], display:'Cash at Bank'},
+  debtors:       {labels:['debtors','tradeotherdebtors','tradeotherreceivables','tradedebtorstradereceivables'], display:'Debtors / Receivables'},
+  stocks:        {labels:['stocks','inventories','totalinventories'], display:'Stock / Inventory'},
+  netCurrent:    {labels:['netcurrentassetsliabilities'], display:'Net Current Assets'},
+  creditors:     {labels:['creditors'], display:'Creditors (latest tagged)'}
+};
+
+function parseIXBRL(htmlText){
+  const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+  const all = doc.getElementsByTagName('*');
+
+  // 1. Build context id → date map (instant or period end)
+  const contexts = {};
+  for(const el of all){
+    const tag = el.tagName.toLowerCase();
+    if(tag.endsWith('context')){
+      const id = el.getAttribute('id');
+      if(!id) continue;
+      let dateStr = '';
+      for(const child of el.getElementsByTagName('*')){
+        const ct = child.tagName.toLowerCase();
+        if(ct.endsWith('instant') || ct.endsWith('enddate')) dateStr = child.textContent.trim();
+      }
+      contexts[id] = dateStr;
+    }
+  }
+
+  // 2. Collect all nonFraction facts
+  const facts = [];
+  for(const el of all){
+    if(!el.tagName.toLowerCase().endsWith('nonfraction')) continue;
+    const nameAttr = (el.getAttribute('name')||'');
+    const local = nameAttr.split(':').pop().toLowerCase();
+    const ctx = el.getAttribute('contextref')||'';
+    const scale = parseInt(el.getAttribute('scale')||'0',10);
+    const sign = el.getAttribute('sign')==='-' ? -1 : 1;
+    const raw = el.textContent.replace(/[,\s\u00a0()]/g,'');
+    const num = parseFloat(raw);
+    if(isNaN(num)) continue;
+    facts.push({local, value: num * Math.pow(10, scale) * sign, date: contexts[ctx]||''});
+  }
+
+  // 3. For each concept, pick the fact with the latest date
+  const out = {};
+  for(const [key, def] of Object.entries(XBRL_CONCEPTS)){
+    const matches = facts.filter(f=>def.labels.includes(f.local));
+    if(!matches.length) continue;
+    matches.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    out[key] = {value: matches[0].value, date: matches[0].date, display: def.display};
+  }
+  return {concepts: out, factCount: facts.length};
+}
+
+function fmtGBP(v){
+  const abs = Math.abs(v);
+  const s = abs>=1e6 ? '£'+(abs/1e6).toFixed(2)+'m' : abs>=1e3 ? '£'+(abs/1e3).toFixed(0)+'k' : '£'+abs.toFixed(0);
+  return v<0 ? '('+s+')' : s;
+}
+
+async function parseAccountsFiling(transactionId, desc){
+  document.getElementById('accounts-modal-title').textContent = `Accounts — ${filingsCompanyName}`;
+  document.getElementById('accounts-modal-sub').textContent = desc;
+  const body = document.getElementById('accounts-body');
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 8px;width:20px;height:20px"></div>Fetching iXBRL document...</div>';
+  document.getElementById('accounts-modal').classList.add('open');
+  const pdfLink = docUrl(filingsCompanyNumber, transactionId, 'pdf');
+  try{
+    const res = await proxyFetch(docUrl(filingsCompanyNumber, transactionId, 'xhtml'), 15000);
+    if(!res.ok) throw new Error(`Document fetch ${res.status}`);
+    const text = await res.text();
+    if(!text.toLowerCase().includes('nonfraction')){
+      body.innerHTML = `<div style="color:var(--text-muted);font-size:13px;line-height:1.7;padding:8px 0">
+        This filing isn't available as tagged iXBRL — likely a scanned or image-based PDF (common for older filings and some confirmation-statement-era documents).
+        <br><br><a href="${pdfLink}" target="_blank" class="btn" style="text-decoration:none;display:inline-block;font-size:12px;padding:8px 16px">Open PDF instead ↗</a></div>`;
+      return;
+    }
+    renderAccountsResult(parseIXBRL(text), pdfLink);
+  }catch(e){
+    body.innerHTML = `<div style="color:var(--text-muted);font-size:13px;line-height:1.7;padding:8px 0">
+      Couldn't fetch the tagged version (${e.message}). You can still read it manually:
+      <br><br><a href="${pdfLink}" target="_blank" class="btn" style="text-decoration:none;display:inline-block;font-size:12px;padding:8px 16px">Open PDF ↗</a></div>`;
+  }
+}
+
+// One-click: find + parse the latest accounts for a company (from result card)
+async function parseLatestAccounts(companyNumber, companyName){
+  filingsCompanyNumber = companyNumber;
+  filingsCompanyName = companyName;
+  document.getElementById('accounts-modal-title').textContent = `Accounts — ${companyName}`;
+  document.getElementById('accounts-modal-sub').textContent = 'Locating latest accounts filing...';
+  const body = document.getElementById('accounts-body');
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 8px;width:20px;height:20px"></div>Searching filing history...</div>';
+  document.getElementById('accounts-modal').classList.add('open');
+  try{
+    const data = await chFetch(`/company/${companyNumber}/filing-history?category=accounts&items_per_page=5`);
+    const filing = (data.items||[]).find(f=>f.transaction_id && f.links && f.links.document_metadata);
+    if(!filing){
+      body.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">No accounts filings with documents found — the company may be too new to have filed.</div>';
+      return;
+    }
+    const desc = (filing.description||'accounts').replace(/-/g,' ') + (filing.date ? ' · '+new Date(filing.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '');
+    await parseAccountsFiling(filing.transaction_id, desc);
+  }catch(e){
+    body.innerHTML = `<div style="color:var(--red);font-size:13px;padding:12px 0">${e.message}</div>`;
+  }
+}
+
+function renderAccountsResult(parsed, pdfLink){
+  const c = parsed.concepts;
+  const body = document.getElementById('accounts-body');
+  const rows = Object.values(c).map(x=>
+    `<div class="director-row">
+      <div class="director-name" style="font-weight:400">${x.display}<span style="font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-left:8px">${x.date||''}</span></div>
+      <div style="font-family:var(--mono);font-size:13px;color:var(--text)">${fmtGBP(x.value)}</div>
+    </div>`
+  ).join('');
+
+  // NCAV = Net Assets − Fixed Assets (identity: Current Assets − Total Liabilities)
+  let ncavBlock = '';
+  if(c.equity && c.fixedAssets){
+    const ncav = c.equity.value - c.fixedAssets.value;
+    const stocks = c.stocks ? c.stocks.value : 0;
+    const debtors = c.debtors ? c.debtors.value : 0;
+    const stressed = ncav - 0.5*stocks - 0.25*debtors;
+    const buyBelow = ncav * 0.66;
+    ncavBlock = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:14px">
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">NCAV — Graham margin of safety</div>
+      <div class="director-row"><div class="director-name" style="font-weight:400">NCAV (Net Assets − Fixed Assets)</div><div style="font-family:var(--mono);color:var(--text)">${fmtGBP(ncav)}</div></div>
+      <div class="director-row"><div class="director-name" style="font-weight:400">Stressed NCAV (stock −50%, debtors −25%)</div><div style="font-family:var(--mono);color:var(--amber)">${fmtGBP(stressed)}</div></div>
+      <div class="director-row"><div class="director-name" style="font-weight:400">66% buy threshold (max market cap)</div><div style="font-family:var(--mono);color:var(--green)">${fmtGBP(buyBelow)}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+        <input type="text" id="ncav-mcap" placeholder="Enter market cap, e.g. 4500000 or 4.5m" style="flex:1;font-size:12px;padding:7px 10px" oninput="ncavVerdict(${ncav},${stressed})">
+        <span id="ncav-verdict" style="font-size:11px;font-family:var(--mono);white-space:nowrap;color:var(--text-muted)">vs NCAV: —</span>
+      </div>
+    </div>`;
+  } else {
+    ncavBlock = `<div style="font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.6">Couldn't derive NCAV — this filing doesn't tag both Net Assets and Fixed Assets (common with micro-entity/abridged accounts, which tag very little). Open the PDF and pull the balance sheet manually.</div>`;
+  }
+
+  body.innerHTML = `
+    ${rows || '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">Document is tagged but none of the standard balance-sheet concepts were found.</div>'}
+    ${ncavBlock}
+    <div id="trend-container"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <a href="${pdfLink}" target="_blank" class="btn btn-ghost" style="text-decoration:none;display:inline-block;font-size:11px;padding:6px 12px">Open full PDF ↗</a>
+      <button class="btn btn-cyan" id="trend-btn" style="font-size:11px;padding:6px 12px" onclick="loadAccountsTrend()">Load multi-year trend 📉</button>
+      <span style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">${parsed.factCount} tagged facts · verify against the PDF before scoring</span>
+    </div>`;
+}
+
+function ncavVerdict(ncav, stressed){
+  const raw = document.getElementById('ncav-mcap').value.trim().toLowerCase().replace(/[£,\s]/g,'');
+  let mcap = NaN;
+  if(/^[\d.]+m$/.test(raw)) mcap = parseFloat(raw)*1e6;
+  else if(/^[\d.]+k$/.test(raw)) mcap = parseFloat(raw)*1e3;
+  else mcap = parseFloat(raw);
+  const el = document.getElementById('ncav-verdict');
+  if(isNaN(mcap)||mcap<=0){ el.textContent='vs NCAV: —'; el.style.color='var(--text-muted)'; return; }
+  if(ncav<=0){ el.textContent='NCAV negative — not a net-net'; el.style.color='var(--red)'; return; }
+  const pct = Math.round((mcap/ncav)*100);
+  if(mcap <= ncav*0.66){ el.textContent=`${pct}% of NCAV — NET-NET ✓`; el.style.color='var(--green)'; }
+  else if(mcap <= ncav){ el.textContent=`${pct}% of NCAV — below NCAV, above 66%`; el.style.color='var(--amber)'; }
+  else { el.textContent=`${pct}% of NCAV — above NCAV`; el.style.color='var(--text-muted)'; }
+}
+
+// ── Director Cross-History Trace ──────────────────────────────────────────────
+const BAD_STATUSES = ['liquidation','insolvency-proceedings','administration','receivership','voluntary-arrangement'];
+
+async function traceOfficer(apptLink, containerId, officerName){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(el.style.display==='block'){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:11px;font-family:var(--mono)">Tracing all UK appointments...</div>';
+  try{
+    const data = await chFetch(`${apptLink}?items_per_page=50`);
+    const items = data.items||[];
+    const total = data.total_results ?? items.length;
+    let active=0, dissolved=0, insolvent=0;
+    items.forEach(a=>{
+      const st = (a.appointed_to && a.appointed_to.company_status)||'';
+      if(st==='active') active++;
+      else if(st==='dissolved') dissolved++;
+      if(BAD_STATUSES.includes(st)) insolvent++;
+    });
+    const chips = `
+      <span class="badge badge-blue">${total} total appointments</span>
+      <span class="badge badge-green">${active} active</span>
+      <span class="badge ${dissolved>3?'badge-amber':'badge-blue'}">${dissolved} dissolved</span>
+      <span class="badge" style="background:${insolvent?'rgba(239,68,68,.12)':'var(--green-dim)'};color:${insolvent?'var(--red)':'var(--green)'}">${insolvent} insolvency-status</span>`;
+    const note = insolvent
+      ? `<div style="font-size:11px;color:var(--red);margin-top:6px">⚠ Prior involvement in ${insolvent} compan${insolvent===1?'y':'ies'} in insolvency status — read the pattern before scoring Character. Dissolutions alone aren't damning (dormant vehicles get struck off routinely); insolvencies with creditor losses are.</div>`
+      : dissolved>5
+        ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">High dissolved count — could be routine SPV churn or serial restarts. Check whether trading companies or dormant shells.</div>`
+        : '';
+    const rows = items.slice(0,15).map(a=>{
+      const co = a.appointed_to||{};
+      const st = co.company_status||'—';
+      const stColor = st==='active'?'var(--green)':BAD_STATUSES.includes(st)?'var(--red)':'var(--text-muted)';
+      const resigned = a.resigned_on ? ` · resigned ${new Date(a.resigned_on).getFullYear()}` : '';
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)">
+        <a href="https://find-and-update.company-information.service.gov.uk/company/${co.company_number}" target="_blank" style="color:var(--text-dim);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${co.company_name||'—'}</a>
+        <span style="font-family:var(--mono);color:${stColor};flex-shrink:0">${st}${resigned}</span>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">${chips}</div>
+      ${note}
+      <div style="margin-top:8px;max-height:180px;overflow-y:auto">${rows}</div>
+      ${total>15?`<div style="font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-top:6px">Showing 15 of ${total} — full list on Companies House</div>`:''}
+    </div>`;
+    // stash worst signal for auto-score if this company is on the watchlist
+    lastTraceSignal = {officerName, insolvent, dissolved, total};
+  }catch(e){
+    el.innerHTML = `<div style="padding:10px;color:var(--red);font-size:12px">${e.message}</div>`;
+  }
+}
+let lastTraceSignal = null;
+
+// ── Multi-Year Accounts Trend ─────────────────────────────────────────────────
+async function loadAccountsTrend(){
+  const btn = document.getElementById('trend-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Loading trend...'; }
+  const container = document.getElementById('trend-container');
+  if(!container) return;
+  container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 8px;width:18px;height:18px"></div><span style="font-size:11px">Parsing up to 5 years of accounts (one fetch per year)...</span></div>';
+  try{
+    const data = await chFetch(`/company/${filingsCompanyNumber}/filing-history?category=accounts&items_per_page=6`);
+    const filings = (data.items||[]).filter(f=>f.transaction_id && f.links && f.links.document_metadata).slice(0,5);
+    if(filings.length<2){ container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Fewer than 2 parseable accounts filings — not enough for a trend.</div>'; if(btn){btn.style.display='none';} return; }
+    const years = [];
+    for(const f of filings){
+      try{
+        const res = await proxyFetch(docUrl(filingsCompanyNumber, f.transaction_id, 'xhtml'), 15000);
+        if(!res.ok) continue;
+        const text = await res.text();
+        if(!text.toLowerCase().includes('nonfraction')) continue;
+        const parsed = parseIXBRL(text);
+        const c = parsed.concepts;
+        if(c.equity){
+          years.push({
+            date: (c.equity.date || f.date || '').slice(0,10),
+            equity: c.equity.value,
+            ncav: c.fixedAssets ? c.equity.value - c.fixedAssets.value : null,
+            cash: c.cash ? c.cash.value : null
+          });
+        }
+      }catch(e){ continue; }
+    }
+    if(years.length<2){ container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Could not parse enough years (older filings may be scanned PDFs).</div>'; if(btn){btn.style.display='none';} return; }
+    years.sort((a,b)=>a.date.localeCompare(b.date));
+    // de-dupe same period-ends (some filings restate)
+    const seen = new Set(); const uniq = [];
+    years.forEach(y=>{ if(!seen.has(y.date)){ seen.add(y.date); uniq.push(y); } });
+    const first = uniq[0], last = uniq[uniq.length-1];
+    const eqChange = first.equity ? ((last.equity-first.equity)/Math.abs(first.equity))*100 : null;
+    const verdict = eqChange===null ? '' :
+      eqChange > 5 ? `<span style="color:var(--green)">Equity growing (+${eqChange.toFixed(0)}% over period) — stable asset pile</span>` :
+      eqChange > -5 ? `<span style="color:var(--amber)">Equity roughly flat (${eqChange.toFixed(0)}%)</span>` :
+      `<span style="color:var(--red)">Equity shrinking (${eqChange.toFixed(0)}%) — melting ice cube risk; a cheap NCAV that erodes 20%/yr isn't cheap, it's a countdown</span>`;
+    const rows = uniq.map((y,i)=>{
+      const prev = i>0 ? uniq[i-1] : null;
+      const yoy = prev && prev.equity ? ((y.equity-prev.equity)/Math.abs(prev.equity)*100).toFixed(0)+'%' : '—';
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:11px">${y.date}</td>
+        <td style="font-family:var(--mono);font-size:11px">${fmtGBP(y.equity)}</td>
+        <td style="font-family:var(--mono);font-size:11px">${y.ncav!==null?fmtGBP(y.ncav):'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px">${y.cash!==null?fmtGBP(y.cash):'—'}</td>
+        <td style="font-family:var(--mono);font-size:11px">${yoy}</td>
+      </tr>`;
+    }).join('');
+    container.innerHTML = `
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px">Multi-year trend (${uniq.length} periods)</div>
+      <div class="pipeline-wrap"><table>
+        <thead><tr><th>Period end</th><th>Equity</th><th>NCAV</th><th>Cash</th><th>YoY</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <div style="font-size:12px;margin-top:8px">${verdict}</div>`;
+    if(btn) btn.style.display='none';
+    // stash for auto-score
+    const entry = watchlist.find(w=>w.company_number===filingsCompanyNumber);
+    if(entry){ entry.trend = {eqChange, periods: uniq.length, ts: Date.now()}; saveWatchlist(); }
+  }catch(e){
+    container.innerHTML = `<div style="font-size:12px;color:var(--red);padding:8px 0">${e.message}</div>`;
+    if(btn){ btn.disabled=false; btn.textContent='Load multi-year trend'; }
+  }
+}
+
+// ── Thesis Journal ────────────────────────────────────────────────────────────
+let thesisTargetId = null;
+function openThesisModal(number, name){
+  thesisTargetId = number;
+  const entry = watchlist.find(w=>w.company_number===number);
+  if(!entry){ alert('Add the company to the watchlist first.'); return; }
+  const t = entry.thesis||{};
+  document.getElementById('thesis-modal-title').textContent = `Thesis — ${name}`;
+  document.getElementById('thesis-must').value = t.must||'';
+  document.getElementById('thesis-risk').value = t.risk||'';
+  document.getElementById('thesis-catalyst').value = t.catalyst||'';
+  document.getElementById('thesis-kill').value = t.kill||'';
+  document.getElementById('thesis-dates').textContent = t.created
+    ? `Created ${new Date(t.created).toLocaleDateString('en-GB')} · Last updated ${new Date(t.updated||t.created).toLocaleDateString('en-GB')}`
+    : '';
+  document.getElementById('thesis-modal').classList.add('open');
+}
+function saveThesis(){
+  const entry = watchlist.find(w=>w.company_number===thesisTargetId);
+  if(!entry) return;
+  const existing = entry.thesis||{};
+  entry.thesis = {
+    must: document.getElementById('thesis-must').value.trim(),
+    risk: document.getElementById('thesis-risk').value.trim(),
+    catalyst: document.getElementById('thesis-catalyst').value.trim(),
+    kill: document.getElementById('thesis-kill').value.trim(),
+    created: existing.created||new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  saveWatchlist();
+  renderWatchlist();
+  closeModal('thesis-modal');
+}
+
+// ── Backup / Restore ──────────────────────────────────────────────────────────
+const BACKUP_KEYS = ['nlr-v3','nlr-imported','nlr-equity-watchlist','nlr-contacts','nlr-google-key','nlr-google-cx'];
+function exportBackup(){
+  const payload = {app:'new-lender-radar', version:1, exported:new Date().toISOString(), data:{}};
+  BACKUP_KEYS.forEach(k=>{ const v = localStorage.getItem(k); if(v!==null) payload.data[k]=v; });
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lender-radar-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function importBackup(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      const payload = JSON.parse(ev.target.result);
+      if(!payload.data){ alert('Not a valid backup file.'); return; }
+      if(!confirm(`Restore backup from ${payload.exported?payload.exported.slice(0,10):'unknown date'}? This overwrites current data.`)) return;
+      Object.entries(payload.data).forEach(([k,v])=>{ if(BACKUP_KEYS.includes(k)) localStorage.setItem(k,v); });
+      alert('Backup restored. Reloading...');
+      location.reload();
+    }catch(err){ alert('Could not parse backup: '+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ── Auto-Assess (evidence-based score suggestions) ────────────────────────────
+// Auto-scores only what CH structured data can defend: Character (filing discipline,
+// insolvency), Capital (individual PSC skin-in-game), Amount (dilution filings),
+// Security (outstanding charges), Capacity (equity trend, if loaded).
+// Purpose / Repayment / Terms and the qualitative layer stay manual — by design.
+async function autoAssess(number, name, ticker, date, address){
+  if(!watchlist.some(w=>w.company_number===number)){
+    watchlist.push({company_number:number, name, ticker, date_of_creation:date, address, scores:{}, notes:'', overall:null, rating:'', added:new Date().toISOString()});
+    saveWatchlist();
+  }
+  const entry = watchlist.find(w=>w.company_number===number);
+  const suggested = {}, evidence = {};
+  const addEv = (cat, txt)=>{ (evidence[cat]=evidence[cat]||[]).push(txt); };
+  try{
+    // 1. Company profile — filing discipline + insolvency flag (1 call)
+    const profile = await chFetch(`/company/${number}`);
+    let charScore = 4;
+    if(profile.accounts && profile.accounts.overdue){ charScore = 2; addEv('Character','Accounts OVERDUE'); }
+    else addEv('Character','Accounts filed on time');
+    if(profile.confirmation_statement && profile.confirmation_statement.overdue){ charScore = Math.min(charScore,2); addEv('Character','Confirmation statement OVERDUE'); }
+    if(profile.has_insolvency_history){ charScore = 1; addEv('Character','⚠ Company has insolvency history'); }
+    suggested.Character = charScore;
+    addEv('Character','Max auto-score is 4 — a 5 needs positive qualitative evidence (your read: dealings, related parties, narrative)');
+
+    // 2. Charges — Security (1 call)
+    try{
+      const ch = await chFetch(`/company/${number}/charges`);
+      const outstanding = (ch.items||[]).filter(c=>(c.status||'outstanding')==='outstanding').length;
+      suggested.Security = outstanding===0 ? 4 : outstanding<=2 ? 3 : 2;
+      addEv('Security', outstanding===0 ? 'No outstanding charges — nothing secured ahead of equity' : `${outstanding} outstanding charge(s) — secured creditors sit ahead of you`);
+    }catch(e){ suggested.Security = 4; addEv('Security','No charges register found (treated as none)'); }
+
+    // 3. Capital filings — Amount / dilution (1 call)
+    try{
+      const cap = await chFetch(`/company/${number}/filing-history?category=capital&items_per_page=50`);
+      const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear()-3);
+      const recent = (cap.items||[]).filter(f=>f.date && new Date(f.date)>=cutoff).length;
+      suggested.Amount = recent===0 ? 4 : recent<=2 ? 3 : 2;
+      addEv('Amount', `${recent} capital filing(s) (allotments etc.) in last 3 years${recent>2?' — heavy dilution pattern':recent===0?' — no dilution on record':''}`);
+    }catch(e){}
+
+    // 4. PSC — Capital / skin in the game (1 call)
+    try{
+      const psc = await chFetch(`/company/${number}/persons-with-significant-control`);
+      const items = (psc.items||[]).filter(p=>!p.ceased_on);
+      const individuals = items.filter(p=>(p.kind||'').includes('individual'));
+      if(individuals.length){ suggested.Capital = 4; addEv('Capital', `${individuals.length} individual PSC(s) with 25%+ control — real skin in the game`); }
+      else if(items.length){ suggested.Capital = 3; addEv('Capital','Control held via corporate entities — trace who owns those (your phoenix/intercompany check)'); }
+      else addEv('Capital','No active PSCs — likely widely-held; check directors\' interests in the annual report instead');
+    }catch(e){}
+
+    // 5. Trend (only if already loaded via Accounts modal — no extra fetches)
+    if(entry.trend && typeof entry.trend.eqChange==='number'){
+      const ec = entry.trend.eqChange;
+      suggested.Capacity = ec>5 ? 4 : ec>-5 ? 3 : 2;
+      addEv('Capacity', `Equity ${ec>0?'+':''}${ec.toFixed(0)}% over ${entry.trend.periods} filed periods${ec<-5?' — melting ice cube':''}`);
+    } else {
+      addEv('Capacity','Run "Load multi-year trend" in Accounts first to auto-score this');
+    }
+
+    entry.auto = {suggested, evidence, ts: Date.now()};
+    saveWatchlist();
+    openScoreModal(number, name, ticker||'', date||'', address||'');
+  }catch(e){
+    alert('Auto-assess failed: '+e.message);
+  }
+}
+
+// ── Quick Links ────────────────────────────────────────────────────────────────
+function openLinksModal(name, ticker){
+  document.getElementById('links-modal-title').textContent = name;
+  document.getElementById('links-list').innerHTML = buildQuickLinks(name, ticker).map(l=>
+    `<a href="${l.url}" target="_blank" class="link-row" style="text-decoration:none">
+      <span class="link-row-label">${l.label}<span class="link-row-cost">${l.cost}</span></span>
+      <span style="color:var(--accent);font-size:12px">Open ↗</span>
+    </a>`
+  ).join('');
+  document.getElementById('links-modal').classList.add('open');
+}
+
+// ── Watchlist ──────────────────────────────────────────────────────────────────
+function toggleWatchlist(number, name, ticker, date, address){
+  const idx = watchlist.findIndex(w=>w.company_number===number);
+  if(idx>-1){ watchlist.splice(idx,1); }
+  else{ watchlist.push({company_number:number, name, ticker, date_of_creation:date, address, scores:{}, notes:'', overall:null, rating:'', added:new Date().toISOString()}); }
+  saveWatchlist(); updateWatchlistStat();
+  const btn = document.getElementById(`watch-btn-${number}`);
+  if(btn){ const inWatch = watchlist.some(w=>w.company_number===number); btn.textContent = inWatch?'✓ In Watchlist':'+ Watchlist'; btn.className = `btn ${inWatch?'btn-ghost':''}`; btn.style.cssText='font-size:11px;padding:6px 12px'; }
+}
+function clearWatchlist(){ if(!confirm('Clear the entire equity watchlist?'))return; watchlist=[]; saveWatchlist(); updateWatchlistStat(); renderWatchlist(); }
+function removeWatchlist(number){ watchlist = watchlist.filter(w=>w.company_number!==number); saveWatchlist(); updateWatchlistStat(); renderWatchlist(); }
+
+function computeOverall(scores){
+  let weighted = 0, weightSum = 0;
+  CCCPARTS_ORDER.forEach(k=>{
+    const v = scores[k];
+    if(v){ weighted += v*CCCPARTS_WEIGHTS[k]; weightSum += CCCPARTS_WEIGHTS[k]; }
+  });
+  if(!weightSum) return null;
+  return Math.round((weighted/weightSum)*100)/100;
+}
+function ratingFor(score){
+  if(score===null || score===undefined) return '—';
+  if(score>=4) return 'Strong candidate';
+  if(score>=3) return 'Watchlist';
+  if(score>=2) return 'Weak - discount only';
+  return 'Avoid';
+}
+function ratingColor(rating){
+  if(rating==='Strong candidate') return 'var(--green)';
+  if(rating==='Watchlist') return 'var(--amber)';
+  if(rating==='Avoid') return 'var(--red)';
+  return 'var(--text-muted)';
+}
+
+function openScoreModal(number, name, ticker, date, address){
+  scoreTargetId = number;
+  if(!watchlist.some(w=>w.company_number===number)){
+    watchlist.push({company_number:number, name, ticker, date_of_creation:date, address, scores:{}, notes:'', overall:null, rating:'', added:new Date().toISOString()});
+    saveWatchlist();
+  }
+  const entry = watchlist.find(w=>w.company_number===number);
+  const auto = entry.auto||{suggested:{},evidence:{}};
+  document.getElementById('score-modal-title').textContent = `CCCPARTS Score — ${name}`;
+  document.getElementById('score-fields').innerHTML = CCCPARTS_ORDER.map(k=>{
+    const manual = entry.scores[k];
+    const suggestedVal = auto.suggested[k];
+    const prefill = manual || suggestedVal || '';
+    const isAuto = !manual && suggestedVal;
+    const evLines = (auto.evidence && auto.evidence[k]) ? auto.evidence[k] : [];
+    const ev = evLines.length
+      ? `<div style="grid-column:1/-1;font-size:10px;color:${isAuto?'var(--cyan)':'var(--text-muted)'};line-height:1.5;padding:2px 2px 0">${isAuto?'⚡ AUTO ':''}${evLines.join(' · ')}</div>`
+      : '';
+    return `<div class="score-row" style="flex-wrap:wrap">
+      <label>${k} <span style="color:var(--text-muted)">(${CCCPARTS_WEIGHTS[k]}%)</span></label>
+      <input type="number" min="1" max="5" step="1" id="score-input-${k}" value="${prefill}" oninput="updateScorePreview()" style="${isAuto?'border-color:var(--cyan)':''}">
+      ${ev}
+    </div>`;
+  }).join('');
+  document.getElementById('score-notes').value = entry.notes||'';
+  updateScorePreview();
+  document.getElementById('score-modal').classList.add('open');
+}
+function updateScorePreview(){
+  const scores = {};
+  CCCPARTS_ORDER.forEach(k=>{
+    const v = parseInt(document.getElementById(`score-input-${k}`)?.value, 10);
+    if(v>=1 && v<=5) scores[k] = v;
+  });
+  const overall = computeOverall(scores);
+  document.getElementById('score-overall-preview').textContent = overall===null ? '—' : overall.toFixed(2);
+}
+function saveScore(){
+  const entry = watchlist.find(w=>w.company_number===scoreTargetId);
+  if(!entry) return;
+  const scores = {};
+  CCCPARTS_ORDER.forEach(k=>{
+    const v = parseInt(document.getElementById(`score-input-${k}`)?.value, 10);
+    if(v>=1 && v<=5) scores[k] = v;
+  });
+  entry.scores = scores;
+  entry.notes = document.getElementById('score-notes').value;
+  entry.overall = computeOverall(scores);
+  entry.rating = ratingFor(entry.overall);
+  saveWatchlist();
+  updateWatchlistStat();
+  closeModal('score-modal');
+}
+
+function renderWatchlist(){
+  const c = document.getElementById('watchlist-container');
+  if(!watchlist.length){ c.innerHTML = '<div class="empty-state"><div class="empty-icon">👁</div><div class="empty-text">No companies added yet.</div></div>'; return; }
+  c.innerHTML = `<div class="pipeline-wrap"><table>
+    <thead><tr><th>Company</th><th>Char</th><th>Cap</th><th>Cptl</th><th>Purp</th><th>Amt</th><th>Repay</th><th>Terms</th><th>Sec</th><th>Overall</th><th>Rating</th><th>Actions</th></tr></thead>
+    <tbody>${watchlist.map(w=>{
+      const s = w.scores||{};
+      const scoreCell = k => s[k] ? s[k] : '<span style="color:var(--text-muted)">—</span>';
+      const rating = w.rating || '—';
+      const overallVal = (w.overall!==null && w.overall!==undefined) ? w.overall.toFixed(2) : '—';
+      return `<tr>
+        <td style="color:var(--text);font-weight:500">${w.name}${w.ticker?` <span style="font-size:10px;color:var(--text-muted);font-family:var(--mono)">${w.ticker}</span>`:''}${w.thesis&&w.thesis.must?' <span title="Thesis written" style="font-size:10px">📝</span>':''}<br><span style="font-size:10px;font-family:var(--mono);color:var(--text-muted)">${w.company_number}</span></td>
+        <td>${scoreCell('Character')}</td><td>${scoreCell('Capacity')}</td><td>${scoreCell('Capital')}</td><td>${scoreCell('Purpose')}</td>
+        <td>${scoreCell('Amount')}</td><td>${scoreCell('Repayment')}</td><td>${scoreCell('Terms')}</td><td>${scoreCell('Security')}</td>
+        <td style="font-weight:600">${overallVal}</td>
+        <td><span style="color:${ratingColor(rating)};font-size:11px;font-family:var(--mono)">${rating}</span></td>
+        <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn btn-purple" style="font-size:10px;padding:4px 8px" onclick="openScoreModal('${w.company_number}','${esc(w.name)}','${esc(w.ticker||'')}','${w.date_of_creation||''}','${esc(w.address||'')}')">Score</button>
+          <button class="btn btn-purple" style="font-size:10px;padding:4px 8px" onclick="autoAssess('${w.company_number}','${esc(w.name)}','${esc(w.ticker||'')}','${w.date_of_creation||''}','${esc(w.address||'')}')">Auto ⚡</button>
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px" onclick="openThesisModal('${w.company_number}','${esc(w.name)}')">Thesis 📝</button>
+          <button class="btn btn-cyan" style="font-size:10px;padding:4px 8px" onclick="openDirectorsModal('${w.company_number}','${esc(w.name)}')">Officers</button>
+          <button class="btn btn-cyan" style="font-size:10px;padding:4px 8px" onclick="parseLatestAccounts('${w.company_number}','${esc(w.name)}')">Accounts</button>
+          <button class="btn btn-cyan" style="font-size:10px;padding:4px 8px" onclick="openFilingsModal('${w.company_number}','${esc(w.name)}')">Filings</button>
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px" onclick="openLinksModal('${esc(w.name)}','${esc(w.ticker||'')}')">Links</button>
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px;color:var(--red);border-color:var(--red)" onclick="removeWatchlist('${w.company_number}')">✕</button>
+        </div></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+}
+
+function exportWatchlistCSV(){
+  if(!watchlist.length){ alert('Watchlist is empty.'); return; }
+  const headers = csvRow(['Company Name','Ticker','Company Number','Character','Capacity','Capital','Purpose','Amount','Repayment','Terms','Security','Overall','Rating','Notes','Thesis: Must Be True','Thesis: Key Risk','Thesis: Catalyst','Thesis: Kill Criteria']);
+  const rows = watchlist.map(w=>{
+    const s = w.scores||{};
+    const t = w.thesis||{};
+    return csvRow([
+      w.name, w.ticker||'', w.company_number,
+      s.Character||'', s.Capacity||'', s.Capital||'', s.Purpose||'', s.Amount||'', s.Repayment||'', s.Terms||'', s.Security||'',
+      (w.overall!==null&&w.overall!==undefined)?w.overall.toFixed(2):'', w.rating||'', w.notes||'',
+      t.must||'', t.risk||'', t.catalyst||'', t.kill||''
+    ]);
+  });
+  downloadCSV(`equity-watchlist-${new Date().toISOString().slice(0,10)}.csv`, [headers, ...rows]);
+}
+
 updatePipelineStat();
 updateGoogleBadge();
+updateWatchlistStat();
 document.getElementById('import-count').textContent = importedLeads.length;
+
 </script>
 </body>
 </html>
