@@ -146,6 +146,7 @@
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <span id="google-active-badge" class="google-active" style="display:none">● Google API active</span>
+    <span id="proxy-active-badge" class="google-active" style="display:none;color:var(--cyan)">● Custom proxy active</span>
     <button class="settings-btn" onclick="openSettings()">⚙ Settings</button>
     <div class="status-pill"><div class="pulse"></div>LIVE</div>
   </div>
@@ -169,6 +170,14 @@
     <div class="settings-field">
       <label>Search Engine ID (cx)</label>
       <input type="text" id="settings-cx" placeholder="e.g. 017576662512468239146:omuauf...">
+    </div>
+    <div class="settings-note">
+      <strong style="color:var(--text)">CORS Proxy — fixes "All proxies failed" / 403 errors</strong><br>
+      The public proxies below get blocked by ad-blockers and some corporate networks. If you're hitting repeated failures, deploy your own free Cloudflare Worker (same pattern as New Lender Radar's original CORS fix — 2 minutes, see chat for the code) and paste its URL here. It's tried first, before falling back to the public ones.
+    </div>
+    <div class="settings-field">
+      <label>Your CORS Proxy URL (optional)</label>
+      <input type="text" id="settings-proxy" placeholder="https://your-worker.your-name.workers.dev">
     </div>
     <div class="settings-note" style="margin-top:16px">
       <strong style="color:var(--text)">Backup &amp; Restore</strong><br>
@@ -517,11 +526,17 @@
 <script>
 // ── Config ───────────────────────────────────────────────────────────────────
 const CH_API_KEY = '035150a0-a960-4557-b368-3da8dc590c64';
-const PROXIES = [
+const PUBLIC_PROXIES = [
   {name:'corsproxy.io',  build:u=>'https://corsproxy.io/?url='+encodeURIComponent(u)},
   {name:'allorigins',    build:u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)},
   {name:'codetabs',      build:u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)}
 ];
+function getProxies(){
+  const custom = localStorage.getItem('nlr-custom-proxy');
+  if(!custom) return PUBLIC_PROXIES;
+  // Custom worker is tried first — it's yours, so it won't be blocklisted or rate-limited like the public ones.
+  return [{name:'your worker', build:u=>custom.replace(/\/$/,'')+'/?url='+encodeURIComponent(u)}, ...PUBLIC_PROXIES];
+}
 
 // ── SIC data ──────────────────────────────────────────────────────────────────
 const SIC_LENDERS  = {'all':'All Lending SICs','64921':'64921 — Credit granting','64922':'64922 — Other credit','64191':'64191 — Banks','64999':'64999 — Financial NEC'};
@@ -573,7 +588,7 @@ function switchMsgTab(tab){
 async function chFetch(path){
   const target = `https://api.company-information.service.gov.uk${path}`;
   const errors = [];
-  for(const proxy of PROXIES){
+  for(const proxy of getProxies()){
     try{
       const res = await fetch(proxy.build(target), {
         headers:{ 'Authorization':'Basic '+btoa(CH_API_KEY+':'), 'x-requested-with':'XMLHttpRequest' }
@@ -1113,25 +1128,31 @@ function copyText(id,btn){ navigator.clipboard.writeText(document.getElementById
 function openSettings(){
   document.getElementById('settings-api-key').value = localStorage.getItem('nlr-google-key')||'';
   document.getElementById('settings-cx').value = localStorage.getItem('nlr-google-cx')||'';
+  document.getElementById('settings-proxy').value = localStorage.getItem('nlr-custom-proxy')||'';
   document.getElementById('settings-modal').classList.add('open');
 }
 function saveSettings(){
   const key = document.getElementById('settings-api-key').value.trim();
   const cx  = document.getElementById('settings-cx').value.trim();
+  const proxy = document.getElementById('settings-proxy').value.trim();
   if(key) localStorage.setItem('nlr-google-key', key); else localStorage.removeItem('nlr-google-key');
   if(cx)  localStorage.setItem('nlr-google-cx',  cx);  else localStorage.removeItem('nlr-google-cx');
+  if(proxy) localStorage.setItem('nlr-custom-proxy', proxy); else localStorage.removeItem('nlr-custom-proxy');
   updateGoogleBadge();
   closeModal('settings-modal');
 }
 function clearGoogleSettings(){
-  localStorage.removeItem('nlr-google-key'); localStorage.removeItem('nlr-google-cx');
+  localStorage.removeItem('nlr-google-key'); localStorage.removeItem('nlr-google-cx'); localStorage.removeItem('nlr-custom-proxy');
   document.getElementById('settings-api-key').value='';
   document.getElementById('settings-cx').value='';
+  document.getElementById('settings-proxy').value='';
   updateGoogleBadge();
 }
 function updateGoogleBadge(){
   const active = !!(localStorage.getItem('nlr-google-key') && localStorage.getItem('nlr-google-cx'));
   document.getElementById('google-active-badge').style.display = active ? 'inline' : 'none';
+  const proxyActive = !!localStorage.getItem('nlr-custom-proxy');
+  document.getElementById('proxy-active-badge').style.display = proxyActive ? 'inline' : 'none';
 }
 
 // ── Contact Lookup ────────────────────────────────────────────────────────────
@@ -1159,7 +1180,7 @@ function extractEmails(text){
 // Fetch via CORS proxy with timeout
 async function proxyFetch(url, timeoutMs=7000){
   let lastErr;
-  for(const proxy of PROXIES){
+  for(const proxy of getProxies()){
     const controller = new AbortController();
     const t = setTimeout(()=>controller.abort(), timeoutMs);
     try{
@@ -2020,7 +2041,7 @@ function saveThesis(){
 }
 
 // ── Backup / Restore ──────────────────────────────────────────────────────────
-const BACKUP_KEYS = ['nlr-v3','nlr-imported','nlr-equity-watchlist','nlr-contacts','nlr-google-key','nlr-google-cx'];
+const BACKUP_KEYS = ['nlr-v3','nlr-imported','nlr-equity-watchlist','nlr-contacts','nlr-google-key','nlr-google-cx','nlr-custom-proxy'];
 function exportBackup(){
   const payload = {app:'new-lender-radar', version:1, exported:new Date().toISOString(), data:{}};
   BACKUP_KEYS.forEach(k=>{ const v = localStorage.getItem(k); if(v!==null) payload.data[k]=v; });
