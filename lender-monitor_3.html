@@ -297,7 +297,7 @@
   <!-- Equity Research tab -->
   <div id="equity-tab" style="display:none">
     <div class="notice">
-      <strong>How this works:</strong> Companies House lookup gives structured data — directors, PSCs, charges, filing history — free, for any UK company. <strong>Accounts 📑</strong> fetches the latest filed accounts as iXBRL (machine-tagged) and auto-extracts the balance sheet: net assets, fixed assets, current assets, cash, debtors, stock — then computes NCAV and the 66% Graham threshold. <strong>Filings 📄</strong> now has category filters (accounts / conf statements / officers / capital / charges) with one-click PDF for every filing. Confirmation statements are scanned PDFs with no structured data, so those open as PDF; shareholder control is better read from the PSC register anyway.
+      <strong>How this works:</strong> Companies House lookup gives structured data — directors, PSCs, charges, filing history — free, for any UK company. <strong>Accounts 📑</strong> fetches the latest filed accounts as iXBRL (machine-tagged) and auto-extracts the balance sheet: net assets, fixed assets, current assets, cash, debtors, stock — then computes NCAV and the 66% Graham threshold. <strong>Filings 📄</strong> now has category filters (accounts / conf statements / officers / capital / charges) with one-click PDF for every filing. Confirmation statements are scanned PDFs with no structured data, so those open as PDF; shareholder control is better read from the PSC register anyway. <strong>Quick Links</strong> now includes a property section — CCOD company-ownership dataset, Price Paid disposals, and a same-registered-address check — company and PSC-held-entity property only, never director home addresses.
     </div>
     <div class="controls" style="grid-template-columns:2fr 1fr auto">
       <div class="control-group">
@@ -517,7 +517,11 @@
 <script>
 // ── Config ───────────────────────────────────────────────────────────────────
 const CH_API_KEY = '035150a0-a960-4557-b368-3da8dc590c64';
-const PROXY = 'https://corsproxy.io/?url=';
+const PROXIES = [
+  {name:'corsproxy.io',  build:u=>'https://corsproxy.io/?url='+encodeURIComponent(u)},
+  {name:'allorigins',    build:u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)},
+  {name:'codetabs',      build:u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)}
+];
 
 // ── SIC data ──────────────────────────────────────────────────────────────────
 const SIC_LENDERS  = {'all':'All Lending SICs','64921':'64921 — Credit granting','64922':'64922 — Other credit','64191':'64191 — Banks','64999':'64999 — Financial NEC'};
@@ -568,11 +572,29 @@ function switchMsgTab(tab){
 // ── API ───────────────────────────────────────────────────────────────────────
 async function chFetch(path){
   const target = `https://api.company-information.service.gov.uk${path}`;
-  const res = await fetch(PROXY + encodeURIComponent(target), {
-    headers:{ 'Authorization':'Basic '+btoa(CH_API_KEY+':'), 'x-requested-with':'XMLHttpRequest' }
-  });
-  if(!res.ok) throw new Error(`CH API ${res.status}`);
-  return res.json();
+  const errors = [];
+  for(const proxy of PROXIES){
+    try{
+      const res = await fetch(proxy.build(target), {
+        headers:{ 'Authorization':'Basic '+btoa(CH_API_KEY+':'), 'x-requested-with':'XMLHttpRequest' }
+      });
+      if(res.status===401 || res.status===403){
+        // Could be the proxy blocking us OR CH rejecting the key — CH itself returns
+        // a JSON body with an 'error' field; a bare/HTML 403 is almost always the proxy.
+        let isCH = false;
+        try{ const peek = await res.clone().json(); isCH = !!(peek && (peek.error||peek.errors)); }catch(e){}
+        if(isCH) throw new Error(`Companies House ${res.status} — check API key / access`);
+        errors.push(`${proxy.name}: ${res.status}`);
+        continue; // try next proxy
+      }
+      if(!res.ok){ errors.push(`${proxy.name}: ${res.status}`); continue; }
+      return await res.json();
+    }catch(e){
+      if(e.message.startsWith('Companies House')) throw e;
+      errors.push(`${proxy.name}: ${e.message}`);
+    }
+  }
+  throw new Error(`All proxies failed (${errors.join(' · ')}) — try again in a moment, or a different browser/network.`);
 }
 
 function daysSince(d){ return Math.floor((Date.now()-new Date(d))/86400000); }
@@ -1136,13 +1158,18 @@ function extractEmails(text){
 
 // Fetch via CORS proxy with timeout
 async function proxyFetch(url, timeoutMs=7000){
-  const controller = new AbortController();
-  const t = setTimeout(()=>controller.abort(), timeoutMs);
-  try{
-    const res = await fetch(PROXY+encodeURIComponent(url), {signal:controller.signal});
-    clearTimeout(t);
-    return res;
-  }catch(e){ clearTimeout(t); throw e; }
+  let lastErr;
+  for(const proxy of PROXIES){
+    const controller = new AbortController();
+    const t = setTimeout(()=>controller.abort(), timeoutMs);
+    try{
+      const res = await fetch(proxy.build(url), {signal:controller.signal});
+      clearTimeout(t);
+      if(res.status===403 || res.status===401){ lastErr=new Error(`${proxy.name} ${res.status}`); continue; }
+      return res;
+    }catch(e){ clearTimeout(t); lastErr=e; continue; }
+  }
+  throw lastErr||new Error('All proxies failed');
 }
 
 // Step 1: Find the actual website URL via DuckDuckGo
@@ -1436,6 +1463,43 @@ function buildQuickLinks(name, ticker){
   ];
 }
 
+// UK postcode pattern, e.g. "EC1A 1BB" or "SW1A1AA"
+function extractPostcode(address){
+  if(!address) return '';
+  const m = address.match(/([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})/);
+  return m ? m[0].toUpperCase() : '';
+}
+
+// Corporate/company property checks only — never director/PSC home addresses.
+// HM Land Registry has no free live per-company search API; CCOD is a downloadable
+// dataset and Price Paid Data is address/postcode based, so these are guided
+// deep-links (Google site-search where no stable direct URL exists) rather than
+// scraped or guessed queries.
+function buildPropertyLinks(name, companyNumber, postcode){
+  const n = encodeURIComponent(name);
+  const links = [
+    {label:'CCOD — UK companies that own property (Land Registry dataset)', cost:'Free account',
+     url:'https://use-land-property-data.service.gov.uk/datasets/ccod',
+     note:'Download the CSV, then search it for this company name/number to see any freehold/leasehold titles held.'},
+    {label:'Land Registry — search a specific title (per-title paid search)', cost:'~£3/title',
+     url:'https://www.gov.uk/search-property-information-land-registry',
+     note:'Use once you have an address from the CCOD dataset or elsewhere — confirms current ownership and any disposal.'}
+  ];
+  if(postcode){
+    links.push({label:`Price Paid Data — sales near ${postcode}`, cost:'Free',
+      url:`https://www.google.com/search?q=site:landregistry.data.gov.uk+${encodeURIComponent(postcode)}`,
+      note:'Checks for recent disposals at/near the registered office — sale-and-leaseback or premises sale is a cash-need signal.'});
+    links.push({label:`Other companies at ${postcode} (same-address check)`, cost:'Free',
+      url:`https://find-and-update.company-information.service.gov.uk/advanced-search/get-results?registeredOfficeAddress=${encodeURIComponent(postcode)}&status=active`,
+      note:'Shared registered address can mean accommodation-address shells, a phoenix pattern, or a related-party group — retype the postcode if it doesn\'t prefill.'});
+  } else {
+    links.push({label:'Same-address check (Companies House advanced search)', cost:'Free',
+      url:'https://find-and-update.company-information.service.gov.uk/advanced-search/',
+      note:'No postcode captured for this company — search the registered office address manually.'});
+  }
+  return links.map(l=>({label:l.label, cost:l.cost, url:l.url, note:l.note}));
+}
+
 function updateWatchlistStat(){ const el=document.getElementById('watchlist-count'); if(el) el.textContent = watchlist.length; }
 function saveWatchlist(){ localStorage.setItem('nlr-equity-watchlist', JSON.stringify(watchlist)); }
 
@@ -1491,7 +1555,7 @@ function renderEquityResults(companies){
         <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="openFilingsModal('${c.company_number}','${esc(name)}')">Filings 📄</button>
         <button class="btn btn-cyan" style="font-size:11px;padding:6px 12px" onclick="parseLatestAccounts('${c.company_number}','${esc(name)}')">Accounts 📑</button>
         <div class="outreach-divider"></div>
-        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="openLinksModal('${esc(name)}','${esc(ticker)}')">Quick Links 🔗</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px" onclick="openLinksModal('${esc(name)}','${esc(ticker)}','${esc(addr)}','${c.company_number}')">Quick Links 🔗</button>
         <button class="btn ${inWatch?'btn-ghost':''}" style="font-size:11px;padding:6px 12px" id="watch-btn-${c.company_number}"
                 onclick="toggleWatchlist('${c.company_number}','${esc(name)}','${esc(ticker)}','${c.date_of_creation}','${esc(addr)}')">
           ${inWatch?'✓ In Watchlist':'+ Watchlist'}
@@ -1832,8 +1896,9 @@ async function traceOfficer(apptLink, containerId, officerName){
       const st = co.company_status||'—';
       const stColor = st==='active'?'var(--green)':BAD_STATUSES.includes(st)?'var(--red)':'var(--text-muted)';
       const resigned = a.resigned_on ? ` · resigned ${new Date(a.resigned_on).getFullYear()}` : '';
-      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)">
-        <a href="https://find-and-update.company-information.service.gov.uk/company/${co.company_number}" target="_blank" style="color:var(--text-dim);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${co.company_name||'—'}</a>
+      return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border);align-items:center">
+        <a href="https://find-and-update.company-information.service.gov.uk/company/${co.company_number}" target="_blank" style="color:var(--text-dim);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${co.company_name||'—'}</a>
+        <a href="#" onclick="openLinksModal('${esc(co.company_name||'')}','','','${co.company_number||''}');return false" title="Property &amp; quick links" style="flex-shrink:0;color:var(--accent);font-size:11px;text-decoration:none">🏠</a>
         <span style="font-family:var(--mono);color:${stColor};flex-shrink:0">${st}${resigned}</span>
       </div>`;
     }).join('');
@@ -2051,14 +2116,22 @@ async function autoAssess(number, name, ticker, date, address){
 }
 
 // ── Quick Links ────────────────────────────────────────────────────────────────
-function openLinksModal(name, ticker){
+function openLinksModal(name, ticker, address, companyNumber){
   document.getElementById('links-modal-title').textContent = name;
-  document.getElementById('links-list').innerHTML = buildQuickLinks(name, ticker).map(l=>
-    `<a href="${l.url}" target="_blank" class="link-row" style="text-decoration:none">
-      <span class="link-row-label">${l.label}<span class="link-row-cost">${l.cost}</span></span>
-      <span style="color:var(--accent);font-size:12px">Open ↗</span>
-    </a>`
-  ).join('');
+  const postcode = extractPostcode(address||'');
+  const quick = buildQuickLinks(name, ticker);
+  const property = buildPropertyLinks(name, companyNumber||'', postcode);
+  const rowHtml = l => `<a href="${l.url}" target="_blank" class="link-row" style="text-decoration:none;flex-direction:column;align-items:flex-start;gap:2px">
+      <div style="display:flex;justify-content:space-between;width:100%">
+        <span class="link-row-label">${l.label}<span class="link-row-cost">${l.cost}</span></span>
+        <span style="color:var(--accent);font-size:12px;flex-shrink:0">Open ↗</span>
+      </div>
+      ${l.note?`<span style="font-size:10px;color:var(--text-muted);line-height:1.4">${l.note}</span>`:''}
+    </a>`;
+  document.getElementById('links-list').innerHTML =
+    quick.map(rowHtml).join('') +
+    `<div style="font-size:10px;font-family:var(--mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 2px">Property &amp; address checks — company only, never director home addresses</div>` +
+    property.map(rowHtml).join('');
   document.getElementById('links-modal').classList.add('open');
 }
 
@@ -2174,7 +2247,7 @@ function renderWatchlist(){
           <button class="btn btn-cyan" style="font-size:10px;padding:4px 8px" onclick="openDirectorsModal('${w.company_number}','${esc(w.name)}')">Officers</button>
           <button class="btn btn-cyan" style="font-size:10px;padding:4px 8px" onclick="parseLatestAccounts('${w.company_number}','${esc(w.name)}')">Accounts</button>
           <button class="btn btn-cyan" style="font-size:10px;padding:4px 8px" onclick="openFilingsModal('${w.company_number}','${esc(w.name)}')">Filings</button>
-          <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px" onclick="openLinksModal('${esc(w.name)}','${esc(w.ticker||'')}')">Links</button>
+          <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px" onclick="openLinksModal('${esc(w.name)}','${esc(w.ticker||'')}','${esc(w.address||'')}','${w.company_number}')">Links</button>
           <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px;color:var(--red);border-color:var(--red)" onclick="removeWatchlist('${w.company_number}')">✕</button>
         </div></td>
       </tr>`;
