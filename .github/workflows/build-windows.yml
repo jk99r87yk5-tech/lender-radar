@@ -41,11 +41,12 @@ jobs:
 
       - name: Locate tkinterdnd2
         id: dnd
+        continue-on-error: true        ← add this line
         shell: pwsh
         run: |
           $path = python -c "import os,tkinterdnd2; print(os.path.dirname(tkinterdnd2.__file__))" 2>$null
           if ($path) { echo "path=$path" >> $env:GITHUB_OUTPUT }
-
+          
       - name: Build with PyInstaller
         shell: pwsh
         run: |
