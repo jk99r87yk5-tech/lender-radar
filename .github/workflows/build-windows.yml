@@ -1,7 +1,7 @@
 name: Build Windows App
 
 on:
-  workflow_dispatch:   # run manually from GitHub Actions tab
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -41,12 +41,12 @@ jobs:
 
       - name: Locate tkinterdnd2
         id: dnd
-        continue-on-error: true        ← add this line
+        continue-on-error: true
         shell: pwsh
         run: |
           $path = python -c "import os,tkinterdnd2; print(os.path.dirname(tkinterdnd2.__file__))" 2>$null
           if ($path) { echo "path=$path" >> $env:GITHUB_OUTPUT }
-          
+
       - name: Build with PyInstaller
         shell: pwsh
         run: |
