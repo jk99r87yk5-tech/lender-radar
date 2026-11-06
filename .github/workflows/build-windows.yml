@@ -5,13 +5,16 @@ on:
   push:
     branches: [main]
     paths:
-      - '**.py'
-      - 'requirements.txt'
+      - 'BankStatementParser/**.py'
+      - 'BankStatementParser/requirements.txt'
       - '.github/workflows/build-windows.yml'
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: BankStatementParser
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +26,7 @@ jobs:
 
       - name: Install Tesseract
         run: choco install tesseract --yes
+        working-directory: .
 
       - name: Install Python dependencies
         run: |
@@ -33,6 +37,7 @@ jobs:
       - name: Locate Tesseract
         id: tess
         shell: pwsh
+        working-directory: .
         run: |
           $tess = "C:\Program Files\Tesseract-OCR\tesseract.exe"
           $data = "C:\Program Files\Tesseract-OCR\tessdata"
@@ -93,5 +98,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BankStatementParser-Windows
-          path: dist/BankStatementParser-Windows.zip
+          path: BankStatementParser/dist/BankStatementParser-Windows.zip
           retention-days: 30
